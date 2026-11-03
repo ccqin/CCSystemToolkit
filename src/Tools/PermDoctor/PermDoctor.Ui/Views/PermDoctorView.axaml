@@ -1,0 +1,156 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PermDoctor.Ui.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="PermDoctor.Ui.Views.PermDoctorView">
+
+    <ScrollViewer>
+        <StackPanel Margin="24,18" MaxWidth="1000" HorizontalAlignment="Center" Spacing="12">
+
+            <!-- 路径输入 -->
+            <Border Classes="card" Padding="16,12">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" >
+                    <TextBlock Grid.Column="0" Text="🔐 权限医生" FontSize="16" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Margin="0,0,14,0"/>
+                    <TextBox Grid.Column="1" Classes="mono" Text="{Binding Path}" Watermark="例如 E:\Programs\Trae CN"
+                             AutomationProperties.AutomationId="input-path" AutomationProperties.Name="文件夹路径"/>
+                    <Button Grid.Column="2" Content="浏览…" Command="{Binding BrowseCommand}" Margin="8,0,0,0"
+                            AutomationProperties.AutomationId="btn-browse" AutomationProperties.Name="浏览文件夹"/>
+                    <Button Grid.Column="3" Content="诊断" Classes="accent" Command="{Binding DiagnoseCommand}" Margin="8,0,0,0"
+                            AutomationProperties.AutomationId="btn-diagnose" AutomationProperties.Name="诊断权限"/>
+                    <Button Grid.Column="4" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
+                            ToolTip.Tip="修改目录安全描述符（授权/取得所有权）通常需要管理员。重启后回到本页重新诊断即可一键修复。"
+                            AutomationProperties.AutomationId="btn-elevate"/>
+                </Grid>
+            </Border>
+
+            <!-- 诊断报告 -->
+            <Border Classes="card" Padding="16,12" IsVisible="{Binding HasReport}">
+                <StackPanel Spacing="10" AutomationProperties.AutomationId="panel-report">
+                    <TextBlock Text="诊断报告" Classes="sectionTitle"/>
+
+                    <!-- 摘要卡片 -->
+                    <Grid ColumnDefinitions="*,*,*,*" >
+                        <Border Grid.Column="0" Classes="card" Padding="10,8" Margin="0,0,8,0">
+                            <StackPanel>
+                                <TextBlock Text="写入实测" Classes="cardLabel"/>
+                                <TextBlock Classes="cardValue" FontSize="15"
+                                           Text="{Binding ReportPublic.WriteTest}"
+                                           Foreground="{Binding ReportPublic.WriteTest, Converter={x:Static vm:Converters.WriteTestBrush}}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Classes="card" Padding="10,8" Margin="0,0,8,0">
+                            <StackPanel>
+                                <TextBlock Text="你的有效权限" Classes="cardLabel"/>
+                                <TextBlock Classes="cardValue" FontSize="15" Text="{Binding ReportPublic.EffectiveRightsText}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Classes="card" Padding="10,8" Margin="0,0,8,0">
+                            <StackPanel>
+                                <TextBlock Text="所有者" Classes="cardLabel"/>
+                                <TextBlock Classes="cardValue" FontSize="15" Text="{Binding ReportPublic.Owner}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="3" Classes="card" Padding="10,8">
+                            <StackPanel>
+                                <TextBlock Text="继承" Classes="cardLabel"/>
+                                <TextBlock Classes="cardValue" FontSize="15"
+                                           Text="{Binding ReportPublic.InheritanceEnabled, Converter={x:Static vm:Converters.BoolToOnOff}}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- 问题清单 -->
+                    <ItemsControl ItemsSource="{Binding ReportPublic.Problems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="2,2,0,0"
+                                           AutomationProperties.Name="{Binding}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ACL 明细 -->
+            <Border Classes="card" Padding="16,12" IsVisible="{Binding HasReport}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="权限明细（ACL）" Classes="sectionTitle"/>
+                    <DataGrid ItemsSource="{Binding Entries}" AutoGenerateColumns="False" CanUserReorderColumns="False"
+                              CanUserResizeColumns="True" CanUserSortColumns="True" IsReadOnly="True"
+                              MinHeight="120" MaxHeight="320" GridLinesVisibility="Horizontal"
+                              AutomationProperties.AutomationId="grid-acl" AutomationProperties.Name="权限明细表">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="标记" Width="110" SortMemberPath="BadgeText">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding BadgeText}" Tag="{Binding BadgeTag}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="6,0"
+                                                   AutomationProperties.Name="{Binding BadgeText}">
+                                            <TextBlock.Styles>
+                                                <Style Selector="TextBlock[Tag=orphan]">
+                                                    <Setter Property="Foreground" Value="#D13438"/>
+                                                </Style>
+                                                <Style Selector="TextBlock[Tag=mine]">
+                                                    <Setter Property="Foreground" Value="#107C10"/>
+                                                </Style>
+                                            </TextBlock.Styles>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="身份（用户/组）" Binding="{Binding Identity}" Width="250"/>
+                            <DataGridTextColumn Header="权限" Binding="{Binding RightsText}" Width="120"/>
+                            <DataGridTextColumn Header="类型" Binding="{Binding TypeText}" Width="60"/>
+                            <DataGridTextColumn Header="应用于" Binding="{Binding AppliesTo}" Width="170"/>
+                            <DataGridTextColumn Header="来源" Binding="{Binding IsInherited, Converter={x:Static vm:Converters.AclSource}}" Width="60"/>
+                            <DataGridTemplateColumn Header="操作" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <!-- 仅孤儿 SID 行显示删除按钮（清理旧电脑残留授权，需管理员） -->
+                                        <Button Content="✕ 删除" FontSize="12" Padding="10,3"
+                                                IsVisible="{Binding IsOrphan}"
+                                                Command="{Binding $parent[DataGrid].DataContext.RemoveEntryCommand}"
+                                                CommandParameter="{Binding}"
+                                                AutomationProperties.AutomationId="btn-remove-acl"
+                                                AutomationProperties.Name="删除孤儿授权"
+                                                ToolTip.Tip="删除这条来自旧系统/其他电脑的孤儿授权（需要管理员）。"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <TextBlock Text="提示：⚠ 孤儿 SID = 来自旧系统/其他电脑的账户（权限对你无效）；✔ 你的权限 = 匹配当前账户的条目（决定你的有效权限）。已按重要性排序。" Opacity="0.55" FontSize="12"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 修复 -->
+            <Border Classes="card" Padding="16,12" IsVisible="{Binding HasReport}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="修复方案" Classes="sectionTitle"/>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="① 授予我修改权限" Classes="accent" Command="{Binding FixGrantCommand}"
+                                ToolTip.Tip="给当前用户添加 Modify（修改）规则，含子文件夹和文件。首选方案。"
+                                AutomationProperties.AutomationId="btn-fix-grant" AutomationProperties.Name="授予修改权限"/>
+                        <Button Content="② 恢复继承" Command="{Binding FixResetCommand}"
+                                ToolTip.Tip="重新接收父目录的授权（icacls /reset），并级联到全部子目录。"
+                                AutomationProperties.AutomationId="btn-fix-reset" AutomationProperties.Name="恢复继承"/>
+                        <Button Content="③ 取得所有权" Command="{Binding FixOwnerCommand}"
+                                ToolTip.Tip="把目录所有者改为当前用户（需要管理员）。成功后再执行①。"
+                                AutomationProperties.AutomationId="btn-fix-owner" AutomationProperties.Name="取得所有权"/>
+                    </StackPanel>
+                    <TextBlock Text="等效命令（复制到管理员终端执行）" Classes="sectionTitle"/>
+                    <TextBox Classes="mono" Text="{Binding Commands}" IsReadOnly="True" TextWrapping="Wrap"
+                             MinHeight="110" AutomationProperties.AutomationId="tb-commands" AutomationProperties.Name="等效命令"/>
+                    <Button Content="复制命令" Command="{Binding CopyCommandsCommand}" HorizontalAlignment="Left"
+                            AutomationProperties.AutomationId="btn-copy-commands"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 状态行 -->
+            <TextBlock Text="{Binding LastMessage}" Opacity="0.7" TextWrapping="Wrap"
+                       AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

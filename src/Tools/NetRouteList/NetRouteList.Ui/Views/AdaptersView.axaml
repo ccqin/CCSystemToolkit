@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NetRouteList.Ui.ViewModels"
+             x:Class="NetRouteList.Ui.Views.AdaptersView"
+             x:DataType="vm:AdaptersViewModel">
+
+    <DockPanel>
+        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+            <Button Content="⟳ 刷新" Command="{Binding RefreshCommand}" Margin="0,0,10,0"
+                    ToolTip.Tip="重新采集所有网卡的信息（IP、网关、接口跃点）与其直连路由状态。"/>
+            <TextBlock VerticalAlignment="Center" Opacity="0.65" TextWrapping="Wrap"
+                       Text="每行一块网卡。IPv4 列中红色“缺直连路由”表示该网段的 on-link 路由不存在，去该网段的流量会掉进默认路由（详见总览页诊断）。"/>
+        </WrapPanel>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Adapters}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:AdapterRowViewModel">
+                        <Border Classes="card" Margin="0,0,0,10" Padding="14,10" ToolTip.Tip="{Binding ToolTip}">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"/>
+                                    <Border Background="{DynamicResource AccentFillColorDefaultBrush}" CornerRadius="4" Padding="6,1">
+                                        <TextBlock Text="{Binding Kind}" FontSize="11"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding Status}" Foreground="{Binding StatusColor}" FontSize="12"/>
+                                    <TextBlock Text="⚠ 有 IP 缺直连路由" Foreground="#D13438" FontSize="12" IsVisible="{Binding HasWarning}"
+                                               ToolTip.Tip="该网卡存在缺失 on-link 直连路由的 IP，见下方 IPv4 列红色标注。"/>
+                                </StackPanel>
+                                <Button Grid.Row="0" Grid.Column="1" Content="查看此网卡路由 →"
+                                        Command="{Binding $parent[UserControl].DataContext.ViewRoutesCommand}" CommandParameter="{Binding}"
+                                        FontSize="12" Padding="10,4"
+                                        ToolTip.Tip="跳转到“路由表”页并只显示这块网卡承载的路由。"/>
+
+                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="110,220,160,120,120" Margin="0,8,0,0">
+                                    <TextBlock Text="驱动描述" Opacity="0.55" FontSize="12" Grid.Column="0"/>
+                                    <TextBlock Text="{Binding Info.Description}" Opacity="0.8" FontSize="12" TextTrimming="CharacterEllipsis" Grid.Column="1"
+                                               ToolTip.Tip="{Binding Info.Description}"/>
+                                    <TextBlock Text="{Binding IfIndex, StringFormat='接口索引 {0}'}" Opacity="0.8" FontSize="12" Grid.Column="2"
+                                               ToolTip.Tip="路由表里 “if” 对应的数字。备份恢复时若索引变化，工具按网卡名称自动重映射。"/>
+                                    <TextBlock Text="{Binding Metric, StringFormat='接口跃点 {0}'}" Opacity="0.8" FontSize="12" Grid.Column="3"
+                                               ToolTip.Tip="网卡的跃点基数：该网卡上所有路由的总跃点 = 接口跃点 + 路由跃点。可在“网卡属性 → IPv4 → 高级”里调整。"/>
+                                    <TextBlock Text="{Binding Mac, StringFormat='MAC {0}'}" Opacity="0.8" FontSize="12" Grid.Column="4"/>
+                                </Grid>
+
+                                <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="110,*,Auto,*" Margin="0,6,0,0">
+                                    <TextBlock Text="IPv4 地址" Opacity="0.55" FontSize="12" Grid.Column="0" VerticalAlignment="Top"/>
+                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Ipv4Items}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="vm:AdapterIpViewModel">
+                                                <StackPanel Orientation="Horizontal" Spacing="8" ToolTip.Tip="{Binding ToolTip}">
+                                                    <TextBlock Text="{Binding Text}" FontFamily="Cascadia Mono,Consolas" FontSize="12"/>
+                                                    <TextBlock Text="{Binding OnLinkText}" FontSize="11" Opacity="0.85">
+                                                        <TextBlock.Styles>
+                                                            <Style Selector="TextBlock">
+                                                                <Setter Property="Foreground" Value="#D13438"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                <Setter Property="Opacity" Value="{Binding Missing, Converter={x:Static vm:Converters.BoolToDouble}}"/>
+                                                            </Style>
+                                                        </TextBlock.Styles>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="默认网关" Opacity="0.55" FontSize="12" Grid.Column="2" VerticalAlignment="Top" Margin="16,0,8,0"/>
+                                    <TextBlock Text="{Binding Gateways}" FontFamily="Cascadia Mono,Consolas" FontSize="12" Grid.Column="3"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

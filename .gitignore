@@ -1,0 +1,13 @@
+# 构建产物
+bin/
+obj/
+*.user
+
+# IDE / 工具
+.vs/
+.zcode/
+.idea/
+
+# 发布产物
+publish/
+*.nupkg

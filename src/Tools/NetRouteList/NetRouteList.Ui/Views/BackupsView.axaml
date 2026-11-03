@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NetRouteList.Ui.ViewModels"
+             x:Class="NetRouteList.Ui.Views.BackupsView"
+             x:DataType="vm:BackupsViewModel">
+
+    <Grid ColumnDefinitions="330,*" Margin="0,0,0,0">
+        <!-- 左：备份列表 -->
+        <DockPanel Grid.Column="0" Margin="0,0,12,0">
+            <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                <Button Content="＋ 创建备份" Command="{Binding CreateBackupCommand}" Classes="accent" Margin="0,0,8,6"
+                        ToolTip.Tip="把当前完整路由表（IPv4+IPv6）与网卡快照保存为 JSON 文件。纯快照操作，不改动系统。"/>
+                <Button Content="💾 导出选中" Command="{Binding ExportCommand}" Margin="0,0,8,6" IsEnabled="{Binding CanModify}"
+                        ToolTip.Tip="把选中的备份另存为 JSON 文件，用于归档或拷贝到其它机器（导入后可按网卡名称映射恢复）。"/>
+                <Button Content="📂 导入" Command="{Binding ImportCommand}" Margin="0,0,8,6"
+                        ToolTip.Tip="从 JSON 文件导入一个备份（可来自其它机器）。"/>
+                <Button Content="⟳ 刷新" Command="{Binding RefreshCommand}" Margin="0,0,0,6"/>
+            </WrapPanel>
+            <ListBox ItemsSource="{Binding Backups}" SelectedItem="{Binding Selected}" MinHeight="300">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="vm:BackupItemViewModel">
+                        <StackPanel Margin="4,6" Spacing="3" ToolTip.Tip="{Binding ToolTip}">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding CreatedAt}" Opacity="0.6" FontSize="11.5"/>
+                            <TextBlock Text="{Binding RouteSummary}" Opacity="0.75" FontSize="11.5"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <!-- 右：详情与操作 -->
+        <Border Grid.Column="1" Classes="card" Padding="16,12" IsVisible="{Binding Selected, Converter={x:Static vm:Converters.NotNullToBool}}">
+            <StackPanel Spacing="10">
+                <TextBlock Text="{Binding Selected.Name}" FontSize="17" FontWeight="SemiBold"/>
+                <StackPanel Orientation="Horizontal" Spacing="14" Opacity="0.7">
+                    <TextBlock Text="{Binding Selected.CreatedAt}"/>
+                    <TextBlock Text="{Binding Selected.RouteSummary}"/>
+                    <TextBlock Text="{Binding Selected.Machine, StringFormat='机器：{0}'}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding Selected.Note}" TextWrapping="Wrap" Opacity="0.8" IsVisible="{Binding Selected.Note, Converter={x:Static vm:Converters.TextToBool}}"/>
+
+                <Separator Margin="0,4"/>
+
+                <WrapPanel Orientation="Horizontal">
+                    <Button Content="⇄ 与当前路由对比" Command="{Binding DiffCommand}" Margin="0,0,10,10"
+                            ToolTip.Tip="对比备份与当前系统路由：备份中有而当前没有的（恢复会添加）、当前有而备份没有的（完全恢复会删除）、两边都有但跃点不同的。"/>
+                    <Button Content="⭳ 应用（恢复）此备份" Command="{Binding RestoreCommand}" Classes="accent" Margin="0,0,10,10" IsEnabled="{Binding CanModify}"
+                            ToolTip.Tip="把备份应用回系统：可选“增量合并”（只补缺失）或“完全恢复”（与备份完全一致）。恢复前会自动创建安全快照。"/>
+                    <Button Content="🗑 删除备份" Command="{Binding DeleteCommand}" Margin="0,0,10,10"
+                            ToolTip.Tip="删除此备份 JSON 文件（不影响系统路由）。"/>
+                </WrapPanel>
+
+                <Separator Margin="0,2"/>
+
+                <TextBlock Text="备份与恢复是怎么工作的" Classes="sectionTitle"/>
+                <TextBlock TextWrapping="Wrap" Opacity="0.75" FontSize="12.5"
+                           Text="备份文件完整记录创建时刻的路由表与网卡名称/IP 快照。恢复时逐条比对：备份里有、当前没有的路由会被添加；跃点不同的会更新；网卡接口索引变化时按“网卡名称”自动重映射。增量合并不会删除任何现有路由；完全恢复还会删除当前多出的“手动添加”类路由（系统/DHCP 自动生成的会跳过保护）。恢复执行前自动保存当前状态作为安全快照，出问题可退回。"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 未选中时的空态 -->
+        <Border Grid.Column="1" Classes="card" Padding="16" IsVisible="{Binding Selected, Converter={x:Static vm:Converters.NullToBool}}">
+            <StackPanel Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="← 从左侧选择一个备份" FontSize="14" Opacity="0.7"/>
+                <TextBlock Text="还没有备份？点“创建备份”给当前路由表拍个快照。" Opacity="0.55" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding SummaryText}" Opacity="0.5" FontSize="11.5" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

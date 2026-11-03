@@ -1,0 +1,130 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NetRouteList.Ui.ViewModels"
+             x:Class="NetRouteList.Ui.Views.RoutesView"
+             x:DataType="vm:RoutesViewModel">
+
+    <UserControl.Resources>
+        <x:String x:Key="TipDest">目标网络 + 前缀。系统按“最长前缀匹配”选路：目的 IP 落在网段内的流量才走这条；前缀越长（越具体）优先级越高。0.0.0.0/0 = 默认路由 = 兜底出口。</x:String>
+        <x:String x:Key="TipMask">子网掩码，与前缀长度一一对应（24 = 255.255.255.0）。</x:String>
+        <x:String x:Key="TipGw">下一跳。“在链路上(on-link)”= 目标就在本网卡网段，直接送达；具体 IP = 先交给该网关（通常是路由器）转发。</x:String>
+        <x:String x:Key="TipIf">流量从哪块网卡发出（route print 第一列的接口索引）。网关必须与所选网卡处于同一网段。</x:String>
+        <x:String x:Key="TipMetric">总跃点 = 接口跃点 + 路由跃点，越小越优先，与 route print 的“跃点数”列一致。多条路由可达同一目的地时系统选总跃点最小的。</x:String>
+        <x:String x:Key="TipProto">这条路由是谁写入的：本地=网卡配 IP 自动生成；DHCP=服务器下发；手动=route add 或本工具；ICMP=重定向学习。</x:String>
+        <x:String x:Key="TipOrigin">路由最初怎么产生：手动配置 / 系统内置 / DHCP / 路由通告等。</x:String>
+        <x:String x:Key="TipKind">持久路由=写入注册表重启保留（route add -p）；动态=重启失效；环回/自动配置=系统维护。</x:String>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="0,0,0,0">
+        <!-- 工具栏 -->
+        <WrapPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBox Text="{Binding SearchText}" Watermark="🔍 搜索目标 / 网关 / 接口…" Width="260" Margin="0,0,10,0"
+                     ToolTip.Tip="在目标网络、网关、接口名中模糊匹配，实时过滤下表。"/>
+            <ComboBox SelectedIndex="{Binding FamilyIndex}" Margin="0,0,10,0" MinWidth="110"
+                      ToolTip.Tip="按地址族过滤：IPv4（route print -4）/ IPv6（route print -6）/ 全部。">
+                <ComboBoxItem Content="全部"/>
+                <ComboBoxItem Content="IPv4"/>
+                <ComboBoxItem Content="IPv6"/>
+            </ComboBox>
+            <ComboBox ItemsSource="{Binding InterfaceOptions}" SelectedItem="{Binding InterfaceFilter}" MinWidth="180" Margin="0,0,10,0"
+                      ToolTip.Tip="只看某块网卡承载的路由。“全部接口”显示所有网卡的路由。"/>
+            <Button Content="⟳ 刷新" Command="{Binding RefreshCommand}" Margin="0,0,10,0"
+                    ToolTip.Tip="重新读取系统路由表。路由可能随时被 DHCP / 代理软件改动，操作后建议刷新核对。"/>
+            <Button Content="＋ 添加路由" Command="{Binding AddRouteCommand}" Classes="accent" Margin="0,0,10,0" IsEnabled="{Binding CanModify}"
+                    ToolTip.Tip="打开添加路由对话框：目标网段、网关或在链路上、出接口、跃点、是否持久。会实时显示等效的 route add 命令。"/>
+            <Button Content="✎ 修改" Command="{Binding EditRouteCommand}" Margin="0,0,10,0"
+                    ToolTip.Tip="修改选中路由的网关 / 接口 / 跃点（先删旧再添新，失败自动回滚）。"/>
+            <Button Content="✕ 删除" Command="{Binding DeleteRouteCommand}" Margin="0,0,10,0"
+                    ToolTip.Tip="删除选中的路由。环回等系统核心路由会被拒绝，防止弄坏系统。"/>
+            <TextBlock Text="{Binding SummaryText}" VerticalAlignment="Center" Opacity="0.6" Margin="6,0,0,0"/>
+        </WrapPanel>
+
+        <!-- 路由表 -->
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Visible}" SelectedItem="{Binding Selected}"
+                  IsReadOnly="True" CanUserReorderColumns="False" CanUserResizeColumns="True"
+                  GridLinesVisibility="Horizontal" BorderThickness="1"
+                  BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                  MinHeight="260" AutoGenerateColumns="False" x:Name="RoutesGrid">
+            <DataGrid.Columns>
+                <DataGridTextColumn Width="190" Binding="{Binding Cidr}">
+                    <DataGridTextColumn.Header>
+                        <StackPanel Orientation="Horizontal" Spacing="4" ToolTip.Tip="{StaticResource TipDest}">
+                            <TextBlock Text="目标网络"/><TextBlock Text="ⓘ" Opacity="0.5" FontSize="11"/>
+                        </StackPanel>
+                    </DataGridTextColumn.Header>
+                </DataGridTextColumn>
+                <DataGridTextColumn Width="140" Binding="{Binding Mask}">
+                    <DataGridTextColumn.Header>
+                        <StackPanel Orientation="Horizontal" Spacing="4" ToolTip.Tip="{StaticResource TipMask}">
+                            <TextBlock Text="子网掩码"/><TextBlock Text="ⓘ" Opacity="0.5" FontSize="11"/>
+                        </StackPanel>
+                    </DataGridTextColumn.Header>
+                </DataGridTextColumn>
+                <DataGridTextColumn Width="150" Binding="{Binding Gateway}">
+                    <DataGridTextColumn.Header>
+                        <StackPanel Orientation="Horizontal" Spacing="4" ToolTip.Tip="{StaticResource TipGw}">
+                            <TextBlock Text="网关 / 下一跳"/><TextBlock Text="ⓘ" Opacity="0.5" FontSize="11"/>
+                        </StackPanel>
+                    </DataGridTextColumn.Header>
+                </DataGridTextColumn>
+                <DataGridTextColumn Width="200" Binding="{Binding Interface}">
+                    <DataGridTextColumn.Header>
+                        <StackPanel Orientation="Horizontal" Spacing="4" ToolTip.Tip="{StaticResource TipIf}">
+                            <TextBlock Text="出接口"/><TextBlock Text="ⓘ" Opacity="0.5" FontSize="11"/>
+                        </StackPanel>
+                    </DataGridTextColumn.Header>
+                </DataGridTextColumn>
+                <DataGridTextColumn Width="230" Binding="{Binding MetricText}">
+                    <DataGridTextColumn.Header>
+                        <StackPanel Orientation="Horizontal" Spacing="4" ToolTip.Tip="{StaticResource TipMetric}">
+                            <TextBlock Text="总跃点"/><TextBlock Text="ⓘ" Opacity="0.5" FontSize="11"/>
+                        </StackPanel>
+                    </DataGridTextColumn.Header>
+                </DataGridTextColumn>
+                <DataGridTextColumn Width="150" Binding="{Binding Protocol}">
+                    <DataGridTextColumn.Header>
+                        <StackPanel Orientation="Horizontal" Spacing="4" ToolTip.Tip="{StaticResource TipProto}">
+                            <TextBlock Text="协议来源"/><TextBlock Text="ⓘ" Opacity="0.5" FontSize="11"/>
+                        </StackPanel>
+                    </DataGridTextColumn.Header>
+                </DataGridTextColumn>
+                <DataGridTextColumn Width="110" Binding="{Binding Origin}">
+                    <DataGridTextColumn.Header>
+                        <StackPanel Orientation="Horizontal" Spacing="4" ToolTip.Tip="{StaticResource TipOrigin}">
+                            <TextBlock Text="路由来源"/><TextBlock Text="ⓘ" Opacity="0.5" FontSize="11"/>
+                        </StackPanel>
+                    </DataGridTextColumn.Header>
+                </DataGridTextColumn>
+                <DataGridTextColumn Width="100" Binding="{Binding Kind}">
+                    <DataGridTextColumn.Header>
+                        <StackPanel Orientation="Horizontal" Spacing="4" ToolTip.Tip="{StaticResource TipKind}">
+                            <TextBlock Text="类型"/><TextBlock Text="ⓘ" Opacity="0.5" FontSize="11"/>
+                        </StackPanel>
+                    </DataGridTextColumn.Header>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+            <DataGrid.Styles>
+                <Style Selector="DataGridCell">
+                    <Setter Property="FontSize" Value="12.5"/>
+                    <Setter Property="Padding" Value="8,6"/>
+                </Style>
+                <Style Selector="DataGridCell:pointerover /template/ ContentPresenter">
+                    <Setter Property="Background" Value="Transparent"/>
+                </Style>
+            </DataGrid.Styles>
+        </DataGrid>
+
+        <!-- 选中详情 -->
+        <Border Grid.Row="2" Classes="card" Margin="0,12,0,0" Padding="14,10"
+                IsVisible="{Binding Selected, Converter={x:Static vm:Converters.NotNullToBool}}">
+            <StackPanel Spacing="6">
+                <TextBlock Text="选中路由详情" Classes="cardLabel"/>
+                <SelectableTextBlock Text="{Binding Selected.ToolTipText}" Classes="mono" FontSize="12" TextWrapping="Wrap" Opacity="0.9"
+                                     ToolTip.Tip="可选中文字后 Ctrl+C 复制。"/>
+                <SelectableTextBlock Text="{Binding Selected.DeleteCommandPreview, StringFormat='等效删除命令：{0}'}" Classes="mono" FontSize="12"
+                                     Opacity="0.65" TextWrapping="Wrap"
+                                     ToolTip.Tip="与图形操作完全等效的命令行命令，可复制到管理员命令行手动执行（可选中后 Ctrl+C）。"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

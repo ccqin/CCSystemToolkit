@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NetRouteList.Ui.ViewModels"
+             x:Class="NetRouteList.Ui.Views.HelpView"
+             x:DataType="vm:HelpViewModel">
+
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{x:Static vm:HelpViewModel.AppIntroText}" TextWrapping="Wrap" Opacity="0.7"
+                   Margin="0,0,0,12"/>
+
+        <Grid ColumnDefinitions="*,320">
+            <!-- 章节 -->
+            <DockPanel Grid.Column="0" Margin="0,0,14,0">
+                <TextBox DockPanel.Dock="Top" Text="{Binding SearchText}" Watermark="🔍 搜索帮助内容…（例如：跃点、on-link、备份）" Margin="0,0,0,10"/>
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding VisibleSections}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:HelpViewModel+HelpSection">
+                                <Border Classes="card" Margin="0,0,0,10" Padding="14,10">
+                                    <Expander>
+                                        <Expander.Header>
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13.5"/>
+                                        </Expander.Header>
+                                        <TextBlock Text="{Binding Body}" TextWrapping="Wrap" Opacity="0.85" Margin="4,6,4,4"/>
+                                    </Expander>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- 字段速查 -->
+            <Border Classes="card" Grid.Column="1" Padding="12,10">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="sectionTitle" Margin="0,0,0,4"
+                               Text="字段速查（悬停看全文）"
+                               ToolTip.Tip="路由表里每个字段的含义速查。路由表页的列头 ⓘ 与各处提示也使用同样内容。"/>
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding FieldTips}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="2,6" Spacing="2">
+                                        <TextBlock Text="{Binding Key}" FontWeight="SemiBold" FontSize="12.5"/>
+                                        <TextBlock Text="{Binding Value}" TextWrapping="Wrap" Opacity="0.7" FontSize="11.5"
+                                                   MaxHeight="58" TextTrimming="CharacterEllipsis"
+                                                   ToolTip.Tip="{Binding Value}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</UserControl>

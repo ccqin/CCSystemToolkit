@@ -1,0 +1,103 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Toolkit.App.Controls"
+             x:Class="Toolkit.App.Views.HomeView">
+
+    <ScrollViewer>
+        <StackPanel Margin="48,40,48,40" MaxWidth="1100" HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock Text="🧰" FontSize="42"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="系统管理工具集" FontSize="28" FontWeight="Bold"/>
+                    <TextBlock Text="集成常用 Windows 系统管理工具 · 点击卡片进入 · ⚙ 可自定义卡片背景"
+                               FontSize="13" Opacity="0.6" Margin="0,5,0,0"/>
+                </StackPanel>
+            </StackPanel>
+
+            <TextBlock Text="可用工具" FontSize="15" FontWeight="SemiBold" Margin="0,36,0,14"/>
+
+            <ItemsControl ItemsSource="{Binding Cards}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <!-- 背景直接绑定按钮本体（默认绿色，始终非空 → 点击命中可靠） -->
+                        <Button Classes="toolcard" Command="{Binding OpenCommand}"
+                                Classes.disabled="{Binding !Enabled}"
+                                Classes.customBg="{Binding HasCustomBackground}"
+                                Background="{Binding CardBackground}"
+                                AutomationProperties.AutomationId="{Binding Key, StringFormat='card-{0}'}"
+                                AutomationProperties.Name="{Binding Title}"
+                                Width="322" MinHeight="176" Margin="0,0,16,16" Padding="0"
+                                HorizontalContentAlignment="Stretch"
+                                ToolTip.Tip="{Binding Description}">
+                            <Panel>
+                                <!-- 阴影装饰层：外扩 7px，不参与命中测试，随卡片一起动 -->
+                                <Border Classes="cardShadow" Margin="-7" IsHitTestVisible="False"/>
+
+                                <!-- 图片背景遮罩：压暗背景保证白字可读（纯色/默认模式不显示） -->
+                                <Border Background="#8C000000" CornerRadius="10" IsVisible="{Binding HasImageBackground}"/>
+
+                                <!-- 文字颜色由样式控制：默认主题前景色，customBg 时白色 -->
+                                <Grid RowDefinitions="Auto,*,Auto" Margin="20,16">
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
+                                        <TextBlock Classes="cardText" Text="{Binding Glyph}" FontSize="30"/>
+                                        <TextBlock Classes="cardText" Text="{Binding Title}" FontSize="17" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="1" Classes="cardText" Text="{Binding Description}" TextWrapping="Wrap"
+                                               Margin="0,10,0,0" Opacity="0.85"/>
+                                    <TextBlock Grid.Row="2" Classes="cardText" Text="进入 →" Opacity="0.55" FontSize="12"
+                                               HorizontalAlignment="Right" IsVisible="{Binding Enabled}"/>
+                                </Grid>
+
+                                <!-- 右上角：卡片背景设置（自绘矢量齿轮，几何对称居中；18=偶数尺寸，光栅化无半像素偏移） -->
+                                <Button Classes="cardSettings"
+                                        AutomationProperties.AutomationId="{Binding Key, StringFormat='cardsettings-{0}'}"
+                                        AutomationProperties.Name="设置卡片背景"
+                                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0"
+                                        ToolTip.Tip="自定义卡片背景：预设颜色、自定义颜色或本地图片">
+                                    <controls:GearIcon Width="18" Height="18"/>
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel Width="270" Spacing="10" Margin="2,6">
+                                                <TextBlock Text="卡片背景" FontSize="14" FontWeight="SemiBold"/>
+                                                <TextBlock Text="预设颜色" FontSize="11.5" Opacity="0.6"/>
+                                                <WrapPanel>
+                                                    <Button Classes="swatch" Background="#4FC3F7" AutomationProperties.AutomationId="swatch-4FC3F7" AutomationProperties.Name="色块·浅蓝" Command="{Binding SetColorCommand}" CommandParameter="#4FC3F7"/>
+                                                    <Button Classes="swatch" Background="#26A69A" AutomationProperties.AutomationId="swatch-26A69A" AutomationProperties.Name="色块·青绿" Command="{Binding SetColorCommand}" CommandParameter="#26A69A"/>
+                                                    <Button Classes="swatch" Background="#66BB6A" AutomationProperties.AutomationId="swatch-66BB6A" AutomationProperties.Name="色块·草绿" Command="{Binding SetColorCommand}" CommandParameter="#66BB6A"/>
+                                                    <Button Classes="swatch" Background="#9CCC65" AutomationProperties.AutomationId="swatch-9CCC65" AutomationProperties.Name="色块·黄绿" Command="{Binding SetColorCommand}" CommandParameter="#9CCC65"/>
+                                                    <Button Classes="swatch" Background="#FFA726" AutomationProperties.AutomationId="swatch-FFA726" AutomationProperties.Name="色块·橙黄" Command="{Binding SetColorCommand}" CommandParameter="#FFA726"/>
+                                                    <Button Classes="swatch" Background="#FF7043" AutomationProperties.AutomationId="swatch-FF7043" AutomationProperties.Name="色块·珊瑚" Command="{Binding SetColorCommand}" CommandParameter="#FF7043"/>
+                                                    <Button Classes="swatch" Background="#EF5350" AutomationProperties.AutomationId="swatch-EF5350" AutomationProperties.Name="色块·绯红" Command="{Binding SetColorCommand}" CommandParameter="#EF5350"/>
+                                                    <Button Classes="swatch" Background="#EC407A" AutomationProperties.AutomationId="swatch-EC407A" AutomationProperties.Name="色块·玫粉" Command="{Binding SetColorCommand}" CommandParameter="#EC407A"/>
+                                                    <Button Classes="swatch" Background="#AB47BC" AutomationProperties.AutomationId="swatch-AB47BC" AutomationProperties.Name="色块·紫" Command="{Binding SetColorCommand}" CommandParameter="#AB47BC"/>
+                                                    <Button Classes="swatch" Background="#7E57C2" AutomationProperties.AutomationId="swatch-7E57C2" AutomationProperties.Name="色块·紫罗兰" Command="{Binding SetColorCommand}" CommandParameter="#7E57C2"/>
+                                                    <Button Classes="swatch" Background="#5C6BC0" AutomationProperties.AutomationId="swatch-5C6BC0" AutomationProperties.Name="色块·靛蓝" Command="{Binding SetColorCommand}" CommandParameter="#5C6BC0"/>
+                                                    <Button Classes="swatch" Background="#78909C" AutomationProperties.AutomationId="swatch-78909C" AutomationProperties.Name="色块·蓝灰" Command="{Binding SetColorCommand}" CommandParameter="#78909C"/>
+                                                </WrapPanel>
+                                                <Button Content="🎨 自定义颜色…" HorizontalAlignment="Stretch"
+                                                        AutomationProperties.AutomationId="btn-custom-color"
+                                                        HorizontalContentAlignment="Left" Command="{Binding CustomColorCommand}"/>
+                                                <Button Content="🖼 选择背景图片…" HorizontalAlignment="Stretch"
+                                                        AutomationProperties.AutomationId="btn-pick-image"
+                                                        HorizontalContentAlignment="Left" Command="{Binding PickImageCommand}"/>
+                                                <Button Content="↺ 恢复默认" HorizontalAlignment="Stretch"
+                                                        AutomationProperties.AutomationId="btn-reset-appearance"
+                                                        HorizontalContentAlignment="Left" Command="{Binding ResetAppearanceCommand}"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Panel>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

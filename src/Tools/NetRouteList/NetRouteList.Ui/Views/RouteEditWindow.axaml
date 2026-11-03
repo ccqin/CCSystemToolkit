@@ -1,0 +1,93 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NetRouteList.Ui.ViewModels"
+        x:Class="NetRouteList.Ui.Views.RouteEditWindow"
+        x:DataType="vm:RouteEditViewModel"
+        Title="{Binding Title}" Width="780" Height="620" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+
+    <Window.Resources>
+        <x:String x:Key="TipDest">要去的网段。可以填网络地址（192.168.1.0）或该网段内任一地址（192.168.1.5），系统会自动归一为网络地址。0.0.0.0/0 是默认路由（兜底出口）。</x:String>
+        <x:String x:Key="TipPrefix">掩码中 1 的个数：24 = 255.255.255.0（C 段）、16 = B 段、8 = A 段、32 = 单个地址、0 = 所有地址。数值越小覆盖面越大、优先级越低。</x:String>
+        <x:String x:Key="TipOnLink">目标就在本网卡所在网段内：系统直接 ARP 找到对方发送，不需要网关。修复“缺失 on-link 路由”时选择此项。</x:String>
+        <x:String x:Key="TipGw">把包先交给该网关（通常是路由器）转发。网关必须与所选网卡的某个 IP 同网段，否则系统会拒绝。</x:String>
+        <x:String x:Key="TipIf">流量从哪块网卡发出。下拉框按“网卡名 (接口索引 · 类型)”显示。</x:String>
+        <x:String x:Key="TipMetric">路由跃点：该路由自身的代价分，越小越优先。实际生效的总跃点 = 接口跃点 + 该值（界面与 route print 显示总跃点）。手动路由常用 1~25。</x:String>
+        <x:String x:Key="TipPersist">勾选 = 持久路由（等价 route add -p）：写入注册表，重启后仍生效。不勾 = 临时路由，重启即消失。</x:String>
+    </Window.Resources>
+
+    <Grid ColumnDefinitions="*,260" Margin="20">
+        <!-- 左：表单 -->
+        <StackPanel Grid.Column="0" Spacing="12" Margin="0,0,18,0">
+            <TextBlock Text="目标设置"/>
+            <Grid ColumnDefinitions="*,140">
+                <TextBox Grid.Column="0" Text="{Binding DestinationText}" Classes="mono" Watermark="例如 192.168.1.0" Margin="0,0,10,0"
+                         ToolTip.Tip="{StaticResource TipDest}"/>
+                <NumericUpDown Grid.Column="1" Value="{Binding PrefixLength}" Minimum="0" Maximum="128" FormatString="0"
+                               Watermark="前缀长度" ToolTip.Tip="{StaticResource TipPrefix}"/>
+            </Grid>
+
+            <TextBlock Text="下一跳（网关）"/>
+            <RadioButton IsChecked="{Binding IsOnLink}" Content="在链路上 (on-link)：目标网段直接接在本网卡上，无需网关"
+                         ToolTip.Tip="{StaticResource TipOnLink}"/>
+            <Grid ColumnDefinitions="Auto,*" IsEnabled="{Binding IsOnLink, Converter={x:Static vm:Converters.NotBool}}">
+                <RadioButton Grid.Column="0" Content="指定网关：" VerticalAlignment="Center" Margin="0,0,8,0"
+                             IsChecked="{Binding IsOnLink, Converter={x:Static vm:Converters.NotBool}}"
+                             ToolTip.Tip="{StaticResource TipGw}"/>
+                <TextBox Grid.Column="1" Text="{Binding GatewayText}" Classes="mono" Watermark="例如 192.168.1.1"
+                         ToolTip.Tip="{StaticResource TipGw}"/>
+            </Grid>
+
+            <TextBlock Text="出接口（网卡）"/>
+            <ComboBox ItemsSource="{Binding Adapters}" SelectedItem="{Binding SelectedAdapter}" HorizontalAlignment="Stretch"
+                      ToolTip.Tip="{StaticResource TipIf}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding Name}"/>
+                            <TextBlock Text="{Binding IfIndex, StringFormat='(if {0})'}" Opacity="0.55"/>
+                            <TextBlock Text="{Binding Kind}" Opacity="0.55"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <Grid ColumnDefinitions="Auto,140,Auto,*">
+                <TextBlock Grid.Column="0" Text="路由跃点" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <NumericUpDown Grid.Column="1" Value="{Binding MetricText}" Minimum="0" Maximum="4294967295" FormatString="0"
+                               ToolTip.Tip="{StaticResource TipMetric}"/>
+                <CheckBox Grid.Column="2" IsChecked="{Binding Persistent}" Content="持久路由 (route add -p)" Margin="16,0,0,0"
+                          ToolTip.Tip="{StaticResource TipPersist}"/>
+            </Grid>
+
+            <TextBlock Text="{Binding ErrorText}" Foreground="#D13438" TextWrapping="Wrap" MinHeight="34"/>
+
+            <SelectableTextBlock Text="{Binding PreviewText}" Classes="mono" FontSize="12" TextWrapping="Wrap" Opacity="0.75"
+                                 ToolTip.Tip="与点击“确定”完全等效的命令行命令，可选中后 Ctrl+C 复制到管理员命令行手动执行。"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,8,0,0">
+                <Button Content="取消" Click="OnCancel" Width="100" Padding="0,7"/>
+                <Button Content="确定（应用修改）" Click="OnOk" Classes="accent" Width="160" Padding="0,7"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- 右：说明 -->
+        <Border Classes="card" Grid.Column="1" Padding="14,10">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="填表说明" FontWeight="SemiBold" FontSize="13.5"/>
+                    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
+                               Text="1. 先确定“目标网段要走哪块网卡、要不要经过网关”。&#10;2. 内网直连修复：目标=网卡所在网段，选“在链路上”，跃点 1。&#10;3. 指定某网段走某网关：目标=该网段，网关填路由器 IP，接口选与之同网段的网卡。&#10;4. 改上网出口优先级：调整默认路由的跃点，或直接在网卡属性里调接口跃点。"/>
+                    <Separator/>
+                    <TextBlock Text="跃点怎么算？" FontWeight="SemiBold" FontSize="12.5"/>
+                    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                               Text="总跃点 = 接口跃点（网卡属性） + 路由跃点（本表单）。同一目的地存在多条路由时，前缀更长的必胜；前缀相同时总跃点小的胜。"/>
+                    <Separator/>
+                    <TextBlock Text="修改已有路由" FontWeight="SemiBold" FontSize="12.5"/>
+                    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                               Text="修改 = 先删除旧条目再创建新条目；若创建失败会自动恢复原条目，不会把你的路由弄丢。"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>

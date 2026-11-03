@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NetRouteList.Ui.ViewModels"
+             xmlns:views="using:NetRouteList.Ui.Views"
+             x:Class="NetRouteList.Ui.Views.NetRouteListView">
+
+    <UserControl.DataTemplates>
+        <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
+            <views:DashboardView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:RoutesViewModel}">
+            <views:RoutesView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AdaptersViewModel}">
+            <views:AdaptersView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:BackupsViewModel}">
+            <views:BackupsView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:HelpViewModel}">
+            <views:HelpView/>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+    <DockPanel>
+        <!-- 底部状态栏（权限状态由宿主全局状态栏显示） -->
+        <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                Background="{DynamicResource LayerFillColorDefaultBrush}"
+                Padding="12,6">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding StatusText}" Opacity="0.75" TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" Margin="4,0,16,0"/>
+                <Button Grid.Column="1" Content="操作日志" Padding="14,4" x:Name="LogButton" ToolTip.Tip="查看本工具执行过的所有操作（增删改路由、备份、恢复等）。">
+                    <Button.Flyout>
+                        <Flyout Placement="Top">
+                            <Border Width="720" Height="360" Padding="4">
+                                <ListBox ItemsSource="{Binding Log}" FontFamily="Cascadia Mono,Consolas"/>
+                            </Border>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- 左侧导航 -->
+        <Border DockPanel.Dock="Left" Width="230"
+                Background="{DynamicResource LayerFillColorAltBrush}"
+                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="16,18,16,10">
+                    <TextBlock Text="🌐 路由管理" FontSize="19" FontWeight="Bold"/>
+                    <TextBlock Text="Windows 路由表 · 备份 · 诊断" FontSize="11.5" Opacity="0.6" Margin="0,3,0,0"/>
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Bottom" Margin="12,10,12,14" Spacing="8">
+                    <Button Content="⟳  全部刷新" Command="{Binding RefreshAllCommand}" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center" Classes="accent"
+                            ToolTip.Tip="重新采集网卡、路由表与诊断数据。系统路由可能随时被 DHCP、代理软件改变，看到数据可疑时先刷新。"/>
+                    <Button Command="{Binding ElevateRestartCommand}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="修改路由表需要管理员权限。点击后弹出 UAC 确认框，工具集将以管理员身份重启（只读浏览不需要提权）。">
+                        <TextBlock Text="{Binding PrivilegeText}" Foreground="{Binding PrivilegeColor}"
+                                   TextWrapping="Wrap" TextAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+
+                <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding CurrentPage}" Margin="6,6,6,6">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="vm:PageViewModelBase">
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,9" ToolTip.Tip="{Binding NavTip}">
+                                <TextBlock Text="{Binding Glyph}" FontSize="16" Width="20" TextAlignment="Center"/>
+                                <TextBlock Text="{Binding Title}" FontSize="13.5"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- 右侧内容区 -->
+        <Grid RowDefinitions="Auto,*">
+            <Border Grid.Row="0" Padding="22,14,22,10" BorderThickness="0,0,0,1"
+                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}">
+                <TextBlock Text="{Binding PageTitle}" FontSize="21" FontWeight="SemiBold"/>
+            </Border>
+            <ContentControl Grid.Row="1" Content="{Binding CurrentPage}" Margin="22,12,22,16"/>
+        </Grid>
+    </DockPanel>
+</UserControl>

@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NetRouteList.Ui.ViewModels"
+             x:Class="NetRouteList.Ui.Views.DashboardView"
+             x:DataType="vm:DashboardViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="14">
+        <!-- 统计卡片 -->
+        <UniformGrid Columns="5">
+            <Border Classes="card" Margin="0,0,8,0" ToolTip.Tip="系统中可路由的网络接口数量（已过滤抓包/过滤驱动等伪接口）。每块网卡都可能承载自己的 IP、网关与路由。">
+                <StackPanel>
+                    <TextBlock Classes="cardLabel" Text="网卡总数"/>
+                    <TextBlock Classes="cardValue" Text="{Binding AdapterCount}"/>
+                </StackPanel>
+            </Border>
+            <Border Classes="card" Margin="0,0,8,0" ToolTip.Tip="当前 IPv4 活动路由条数（与 route print -4 的活动路由一致）。包含系统自动生成的直连/多播/广播路由。">
+                <StackPanel>
+                    <TextBlock Classes="cardLabel" Text="IPv4 路由"/>
+                    <TextBlock Classes="cardValue" Text="{Binding RouteCountV4}"/>
+                </StackPanel>
+            </Border>
+            <Border Classes="card" Margin="0,0,8,0" ToolTip.Tip="0.0.0.0/0 兜底路由条数。超过 1 条时系统按“总跃点”最小者生效，其余是备份；代理 TUN 常以跃点 0 抢占。">
+                <StackPanel>
+                    <TextBlock Classes="cardLabel" Text="默认路由"/>
+                    <TextBlock Classes="cardValue" Text="{Binding DefaultRouteCount}"/>
+                </StackPanel>
+            </Border>
+            <Border Classes="card" Margin="0,0,8,0" BorderBrush="#D13438" ToolTip.Tip="诊断发现的影响可达性的问题数（如缺失直连路由）。每条问题下方都有解释与处理建议。">
+                <StackPanel>
+                    <TextBlock Classes="cardLabel" Text="错误"/>
+                    <TextBlock Classes="cardValue" Text="{Binding ErrorCount}" Foreground="#D13438"/>
+                </StackPanel>
+            </Border>
+            <Border Classes="card" ToolTip.Tip="诊断发现的潜在风险数（如多默认路由、跨网卡网段冲突）。">
+                <StackPanel>
+                    <TextBlock Classes="cardLabel" Text="警告"/>
+                    <TextBlock Classes="cardValue" Text="{Binding WarningCount}" Foreground="#C19C00"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="sectionTitle" Text="诊断结果" VerticalAlignment="Center"
+                       ToolTip.Tip="自动检测：多默认路由、缺失 on-link 直连路由、网段冲突、APIPA 地址、代理 TUN 接管。每条问题都附有“这是什么/为什么/怎么办”。"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding TakenAtText}" Opacity="0.55" VerticalAlignment="Center"/>
+                <Button Content="⟳ 重新诊断" Command="{Binding RefreshCommand}" Classes="accent" Padding="14,6"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 问题列表 -->
+        <ItemsControl ItemsSource="{Binding Issues}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:DiagnosticIssueViewModel">
+                    <Border Classes="card" Margin="0,0,0,10" Padding="14,10">
+                        <Expander IsExpanded="True">
+                            <Expander.Header>
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center"
+                                            Background="{Binding SeverityColor}"/>
+                                    <TextBlock Text="{Binding SeverityText}" Foreground="{Binding SeverityColor}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Expander.Header>
+                            <StackPanel Spacing="8" Margin="6,4,0,6">
+                                <SelectableTextBlock Text="{Binding Explanation}" TextWrapping="Wrap" Opacity="0.85"
+                                                     ToolTip.Tip="可选中文字后 Ctrl+C 复制。"/>
+                                <ItemsControl ItemsSource="{Binding Affected}" IsVisible="{Binding HasAffected}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <SelectableTextBlock Text="{Binding}" TextWrapping="Wrap" Margin="14,2,0,2"
+                                                                 FontFamily="Cascadia Mono,Consolas" FontSize="12" Opacity="0.9"
+                                                                 ToolTip.Tip="可选中文字后 Ctrl+C 复制。"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <SelectableTextBlock TextWrapping="Wrap" Opacity="0.85">
+                                    <Run Text="建议：" FontWeight="SemiBold"/><Run Text="{Binding Suggestion}"/>
+                                </SelectableTextBlock>
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Button Content="🔧 一键修复" Command="{Binding $parent[UserControl].DataContext.RepairCommand}" CommandParameter="{Binding}"
+                                            Classes="accent" HorizontalAlignment="Left" Padding="14,6"
+                                            IsVisible="{Binding HasRepair}"
+                                            ToolTip.Tip="修复动作会先弹出确认框，展示将要执行的等效命令；执行后展示逐条结果。"/>
+                                    <Button Content="⧉ 复制此问题" Click="OnCopyIssue" HorizontalAlignment="Left" Padding="14,6" FontSize="12"
+                                            ToolTip.Tip="把这条诊断的完整内容（标题、明细、说明、建议）复制到剪贴板，可直接粘贴到工单/聊天里。"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

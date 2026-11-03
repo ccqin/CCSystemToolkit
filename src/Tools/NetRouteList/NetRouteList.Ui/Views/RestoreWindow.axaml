@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="NetRouteList.Ui.Views.RestoreWindow"
+        xmlns:vm="using:NetRouteList.Ui.ViewModels"
+        x:DataType="vm:RestoreWindowViewModel"
+        Title="应用（恢复）备份" Width="660" Height="640" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="22" Spacing="12">
+            <TextBlock Text="即将应用备份" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock FontSize="13" Opacity="0.8"
+                       Text="{Binding BackupName, StringFormat='备份：{0}'}"/>
+            <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12.5"
+                       Text="恢复方式决定“把系统路由表改到什么程度”，请按需选择："/>
+
+            <RadioButton IsChecked="{Binding IsMerge}" Content="增量合并（推荐，低风险）" FontWeight="SemiBold"/>
+            <Border BorderThickness="2,0,0,0" BorderBrush="#107C10" Padding="10,4" Margin="26,0,0,0" Opacity="0.8">
+                <TextBlock TextWrapping="Wrap" FontSize="12"
+                           Text="只把“备份里有、当前没有”的路由补回来；跃点不同的更新为备份值；不删除任何现有路由。适合：修复被改乱的个别路由、迁移配置到新机器。"/>
+            </Border>
+
+            <RadioButton IsChecked="{Binding IsExact}" Content="完全恢复（与备份完全一致）" FontWeight="SemiBold"/>
+            <Border BorderThickness="2,0,0,0" BorderBrush="#D13438" Padding="10,4" Margin="26,0,0,0" Opacity="0.8">
+                <TextBlock TextWrapping="Wrap" FontSize="12"
+                           Text="除补缺失、更新差异外，还会删除“当前有、备份没有”的手动类路由（route add / 本工具添加的）；系统/DHCP 自动生成的路由会被跳过保护并说明。适合：把机器恢复到备份时的已知良好状态。"/>
+            </Border>
+
+            <Separator Margin="0,4"/>
+
+            <CheckBox IsChecked="{Binding SafetySnapshot}" Content="恢复前自动创建当前状态的安全快照（强烈建议保留）"
+                      ToolTip.Tip="恢复前先把当前路由表存为一个备份（备注里标明由谁触发）。万一恢复结果不对，可以用它一键退回。"/>
+            <CheckBox IsChecked="{Binding SkipSystemRoutes}" Content="跳过系统关键路由（127/8、224/4、255.255.255.255、169.254/16 及 IPv6 对应项）"
+                      ToolTip.Tip="这些路由由系统自行维护，删除/覆盖极易破坏网络，默认不参与恢复。"/>
+            <CheckBox IsChecked="{Binding IncludeIpv6}" Content="同时恢复 IPv6 路由（默认只恢复 IPv4）"
+                      ToolTip.Tip="IPv6 路由多数由路由通告自动生成，一般无需恢复。"/>
+
+            <Separator Margin="0,4"/>
+
+            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                       Text="说明：网卡接口索引在重启/增删网卡后会变化。恢复时若备份里的索引与当前网卡对不上，会按“网卡名称”自动重映射；网卡已不存在的条目会跳过并在结果中说明。"/>
+
+            <TextBlock Text="{Binding ErrorText}" Foreground="#D13438" TextWrapping="Wrap"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,8,0,0">
+                <Button Content="取消" Click="OnCancel" Width="110" Padding="0,7"/>
+                <Button Content="开始恢复" Click="OnOk" Classes="accent" Width="140" Padding="0,7"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

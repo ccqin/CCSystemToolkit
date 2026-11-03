@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Toolkit.App.ViewModels"
+             x:Class="Toolkit.App.Views.LogListView">
+
+    <UserControl.Styles>
+        <!-- 消息默认用主题前景色；仅成功/失败着色（Tag 绑定 LevelText） -->
+        <Style Selector="TextBlock.logMsg[Tag=Success]">
+            <Setter Property="Foreground" Value="#107C10"/>
+        </Style>
+        <Style Selector="TextBlock.logMsg[Tag=Error]">
+            <Setter Property="Foreground" Value="#D13438"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- 空态提示 -->
+        <TextBlock Grid.Row="0" Text="暂无日志——进入工具执行操作后，所有工具的日志会统一显示在这里。"
+                   Opacity="0.5" Margin="4,8"
+                   IsVisible="{Binding Logs.Count, Converter={x:Static vm:Converters.CountIsZero}}"/>
+
+        <ListBox Grid.Row="1" ItemsSource="{Binding Logs}" FontFamily="Cascadia Mono,Consolas"
+                 AutomationProperties.AutomationId="list-logs-flyout" AutomationProperties.Name="日志列表">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="4,3"
+                                AutomationProperties.Name="{Binding Message}">
+                        <TextBlock Text="{Binding TimeText}" Opacity="0.55" VerticalAlignment="Center"/>
+                        <Border CornerRadius="4" Padding="7,2" VerticalAlignment="Center"
+                                Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                            <TextBlock Text="{Binding Source}" FontSize="11.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                        </Border>
+                        <TextBlock Classes="logMsg" Tag="{Binding LevelText}" Text="{Binding Message}"
+                                   TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>

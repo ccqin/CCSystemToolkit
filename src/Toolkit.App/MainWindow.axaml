@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:Toolkit.App.Views"
+        x:Class="Toolkit.App.MainWindow"
+        Title="系统管理工具集"
+        Width="1280" Height="860" MinWidth="1080" MinHeight="700"
+        WindowStartupLocation="CenterScreen">
+
+    <DockPanel>
+        <!-- 底部全局状态栏 -->
+        <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                Background="{DynamicResource LayerFillColorDefaultBrush}"
+                Padding="12,6">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Text="权限:" Opacity="0.6"/>
+                    <TextBlock Text="{Binding PrivilegeText}" Foreground="{Binding PrivilegeColor}" FontWeight="SemiBold"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding StatusText}" Opacity="0.75" TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" Margin="16,0,16,0"/>
+                <Button Grid.Column="2" Content="以管理员重启" Command="{Binding ElevateRestartCommand}" Padding="14,4"
+                        AutomationProperties.AutomationId="btn-elevate"
+                        ToolTip.Tip="部分工具需要管理员权限。点击后弹出 UAC 确认框，程序将以管理员身份重启（重启后回到主页）。"/>
+                <Button Grid.Column="3" Content="日志" Padding="14,4" Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="btn-logs-flyout"
+                        ToolTip.Tip="查看所有工具归集到主页的统一日志。">
+                    <Button.Flyout>
+                        <Flyout Placement="Top">
+                            <Border Width="780" Height="400" Padding="6">
+                                <views:LogListView/>
+                            </Border>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <Button Grid.Column="4" Content="{Binding ThemeText}" Command="{Binding CycleThemeCommand}" Padding="14,4" Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="btn-theme" AutomationProperties.Name="主题切换"
+                        ToolTip.Tip="循环切换界面主题：跟随系统 → 浅色 → 深色。"/>
+                <TextBlock Grid.Column="5" Text="Avalonia · .NET 10" Opacity="0.45" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </Grid>
+        </Border>
+
+        <!-- 顶部导航条 -->
+        <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                Background="{DynamicResource LayerFillColorAltBrush}"
+                Padding="14,8">
+            <StackPanel Orientation="Horizontal" Spacing="14">
+                <Button Command="{Binding GoHomeCommand}" Content="← 返回主页" Padding="12,5"
+                        IsVisible="{Binding !IsHome}"
+                        ToolTip.Tip="返回工具集主页（工具内的未保存状态会丢失）。"/>
+                <TextBlock Text="{Binding HeaderTitle}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 内容区：主页卡片墙 / 工具界面 -->
+        <ContentControl Content="{Binding CurrentView}"/>
+    </DockPanel>
+</Window>

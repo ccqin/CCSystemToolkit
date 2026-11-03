@@ -14,7 +14,7 @@
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" >
                     <TextBlock Grid.Column="0" Text="🔐 权限医生" FontSize="16" FontWeight="SemiBold"
                                VerticalAlignment="Center" Margin="0,0,14,0"/>
-                    <TextBox Grid.Column="1" Classes="mono" Text="{Binding Path}" Watermark="例如 E:\Programs\Trae CN"
+                    <TextBox Grid.Column="1" Classes="mono" Text="{Binding Path}" Watermark="输入或选择要诊断的文件夹（安装报“拒绝访问”的目录）"
                              AutomationProperties.AutomationId="input-path" AutomationProperties.Name="文件夹路径"/>
                     <Button Grid.Column="2" Content="浏览…" Command="{Binding BrowseCommand}" Margin="8,0,0,0"
                             AutomationProperties.AutomationId="btn-browse" AutomationProperties.Name="浏览文件夹"/>

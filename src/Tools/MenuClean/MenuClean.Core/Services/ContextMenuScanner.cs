@@ -155,9 +155,10 @@ public sealed class ContextMenuScanner
                     cmdKey.Dispose();
                 }
 
-                var title = PrettyTitle((sub.GetValue("MUIVerb") as string)
-                            ?? (sub.GetValue(null) as string)?.Trim()
-                            ?? verb);
+                // 标题回退：MUIVerb → 默认值 → 键名（空字符串也要回退，否则渲染成空行）
+                var rawTitle = (sub.GetValue("MUIVerb") as string)?.Trim();
+                if (string.IsNullOrWhiteSpace(rawTitle)) rawTitle = (sub.GetValue(null) as string)?.Trim();
+                var title = PrettyTitle(string.IsNullOrWhiteSpace(rawTitle) ? verb : rawTitle);
                 bool legacy = sub.GetValueNames().Any(n => n.Equals("LegacyDisable", StringComparison.OrdinalIgnoreCase));
                 bool extended = sub.GetValueNames().Any(n => n.Equals("Extended", StringComparison.OrdinalIgnoreCase));
 

@@ -49,7 +49,8 @@ public static class SuspectedTextScanner
                     if (id == 0) continue;
                     int len = LoadString(hMod, id, sb, sb.Capacity);
                     if (len <= 0) continue;
-                    var s = sb.ToString().Trim();
+                    // 只取实际长度（ToString() 会带出缓冲区残留 → 乱码/空行）
+                    var s = sb.ToString(0, len).Trim();
                     if (LooksLikeMenuText(s))
                     {
                         results.Add(s);
@@ -69,10 +70,12 @@ public static class SuspectedTextScanner
     private static bool LooksLikeMenuText(string s)
     {
         if (s.Length is < 2 or > 48) return false;
+        if (s.Any(char.IsControl)) return false;                       // 控制字符 → 空行/乱码
         if (s.Contains('\n') || s.Contains('\r') || s.Contains('\t')) return false;
         if (s.EndsWith(':') || s.Contains("://") || s.Contains('%')) return false;
         if (s.StartsWith("!", StringComparison.Ordinal)) return false;   // 加速器标记
         if (s.All(char.IsDigit) || s.All(char.IsWhiteSpace)) return false;
+        if (s.All(c => char.IsSymbol(c) || char.IsPunctuation(c) || char.IsWhiteSpace(c))) return false;   // 纯符号串（如"—…"）
 
         // 含中文且短语化 → 高概率是界面文字
         bool hasChinese = s.Any(c => c >= 0x4E00 && c <= 0x9FFF);

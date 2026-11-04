@@ -226,12 +226,12 @@
             </TabItem>
 
             <TabItem Header="📦 来源视图" AutomationProperties.AutomationId="tab-source">
-                <!-- 来源视图：按软件聚合，点击展开全部注入点 -->
-                <ScrollViewer Margin="0,10,0,0">
+                <!-- 来源视图：按软件聚合，点击展开全部注入点（面板统一宽度撑满到右侧） -->
+                <ScrollViewer Margin="0,10,0,0" HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding SourceGroups}" Margin="2">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Expander Classes="card" Padding="6,4" Margin="0,0,0,8"
+                                <Expander Classes="card" Padding="6,4" Margin="0,0,0,8" HorizontalAlignment="Stretch"
                                           AutomationProperties.AutomationId="expander-source" AutomationProperties.Name="{Binding Name}">
                                     <Expander.Header>
                                         <Grid ColumnDefinitions="Auto,*,Auto" Margin="4,4">
@@ -255,8 +255,23 @@
                                             </StackPanel>
                                         </Grid>
                                     </Expander.Header>
-                                    <!-- 展开内容：该来源的全部注入点 -->
-                                    <ItemsControl ItemsSource="{Binding Items}" Margin="8,2,8,6">
+                                    <!-- 展开内容：表头 + 该来源的全部注入点（列与表头对齐，统一撑满右侧） -->
+                                    <StackPanel>
+                                    <Grid ColumnDefinitions="2*,90,60,90,Auto" Margin="8,2,8,2">
+                                        <Grid.Styles>
+                                            <Style Selector="TextBlock.colHeader">
+                                                <Setter Property="FontSize" Value="11"/>
+                                                <Setter Property="Opacity" Value="0.55"/>
+                                                <Setter Property="Margin" Value="2,2"/>
+                                            </Style>
+                                        </Grid.Styles>
+                                        <TextBlock Grid.Column="0" Classes="colHeader" Text="名称"/>
+                                        <TextBlock Grid.Column="1" Classes="colHeader" Text="场景"/>
+                                        <TextBlock Grid.Column="2" Classes="colHeader" Text="类型"/>
+                                        <TextBlock Grid.Column="3" Classes="colHeader" Text="状态"/>
+                                        <TextBlock Grid.Column="4" Classes="colHeader" Text="开关"/>
+                                    </Grid>
+                                    <ItemsControl ItemsSource="{Binding Items}" Margin="8,0,8,6">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid ColumnDefinitions="2*,90,60,90,Auto" Margin="2,4">
@@ -274,6 +289,7 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
+                                    </StackPanel>
                                 </Expander>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

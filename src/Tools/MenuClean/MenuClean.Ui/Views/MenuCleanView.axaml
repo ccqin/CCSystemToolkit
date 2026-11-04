@@ -146,10 +146,10 @@
             </Border>
 
             <Grid ColumnDefinitions="*,Auto" Grid.Column="1">
-                <!-- 模拟菜单预览：shell 组 + 分隔 + 扩展组 -->
+                <!-- 模拟菜单预览：shell 组 + 分隔 + 扩展组（条目多时内部滚动） -->
                 <Border Classes="menuPreview" VerticalAlignment="Top" MaxWidth="560" HorizontalAlignment="Left"
                         AutomationProperties.AutomationId="menu-preview" AutomationProperties.Name="菜单预览">
-                    <StackPanel Spacing="1">
+                    <ScrollViewer MaxHeight="500">
                         <ItemsControl ItemsSource="{Binding MenuItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -175,7 +175,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </StackPanel>
+                    </ScrollViewer>
                 </Border>
 
                 <!-- 选中项详情 -->

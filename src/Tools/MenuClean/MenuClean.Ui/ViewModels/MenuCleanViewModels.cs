@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Input.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MenuClean.Core.Models;
@@ -80,13 +81,14 @@ public partial class SourceGroupViewModel : ObservableObject
     public string Summary => $"{Count} 处注入 · {ResidualCount} 残留 · {DisabledCount} 已禁用";
 }
 
-/// <summary>清理右键菜单主 VM：扫描 + 三视图（场景 / 来源 / 列表）。</summary>
+/// <summary>清理右键菜单主 VM：扫描 + 三视图（场景 / 来源 / 列表）+ 共享详情面板。</summary>
 public partial class MenuCleanViewModel : ObservableObject
 {
     private readonly IToolHost _host;
     private readonly ContextMenuScanner _scanner;
     private readonly MenuCleaner _cleaner;
     private readonly MenuBackupService _backup = new();
+    private readonly EntryDetailService _detail = new();
 
     public MenuCleanViewModel(IToolHost host)
     {
@@ -129,11 +131,55 @@ public partial class MenuCleanViewModel : ObservableObject
 
     public bool HasSelectedEntry => SelectedEntry is not null;
 
+    /// <summary>详情行（注册表值 + 文件信息，点击条目时实时读取）。</summary>
+    public ObservableCollection<DetailRow> DetailRows { get; } = [];
+
+    /// <summary>等效命令（禁用/启用/删除，可复制到管理员终端）。</summary>
+    [ObservableProperty]
+    private string _detailCommands = "";
+
+    partial void OnSelectedEntryChanged(EntryItemViewModel? value)
+    {
+        DetailRows.Clear();
+        if (value?.Model is not { } m)
+        {
+            DetailCommands = "";
+            return;
+        }
+
+        try
+        {
+            foreach (var row in _detail.GetDetails(m)) DetailRows.Add(row);
+        }
+        catch (Exception ex)
+        {
+            DetailRows.Add(new DetailRow("读取失败", ex.Message));
+        }
+
+        DetailCommands = string.Join(Environment.NewLine,
+            ":: 禁用（可逆）", MenuCleaner.CommandText(m, "disable"),
+            ":: 启用", MenuCleaner.CommandText(m, "enable"),
+            ":: 删除（先备份）", MenuCleaner.CommandText(m, "delete"));
+    }
+
     // 统计卡
     public int TotalCount => Entries.Count;
     public int ThirdPartyCount => Entries.Count(e => !e.IsSystem);
     public int ResidualCount => Entries.Count(e => e.IsResidual);
     public int DisabledCount => Entries.Count(e => !e.IsEnabled);
+
+    /// <summary>主窗口引用（剪贴板），由视图加载时注入。</summary>
+    public Avalonia.Controls.Window? Owner { get; set; }
+
+    [RelayCommand]
+    private async Task CopyDetailCommands()
+    {
+        if (Owner is not { } owner || string.IsNullOrEmpty(DetailCommands)) return;
+        var clipboard = Avalonia.Controls.TopLevel.GetTopLevel(owner)?.Clipboard;
+        if (clipboard is null) return;
+        await clipboard.SetTextAsync(DetailCommands);
+        AddLog("✔ 已复制等效命令到剪贴板。");
+    }
 
     public void AddLog(string message)
     {

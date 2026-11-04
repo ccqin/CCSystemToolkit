@@ -121,8 +121,10 @@
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" Opacity="0.7" Margin="2,10,0,0"
                    TextWrapping="Wrap" AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
 
-        <!-- ============ 三个 Tab 页 ============ -->
-        <TabControl AutomationProperties.AutomationId="tabs-views" AutomationProperties.Name="视图页签">
+        <!-- ============ 内容区：左 Tab 页 + 右共享详情 ============ -->
+        <Grid ColumnDefinitions="*,Auto">
+
+        <TabControl Grid.Column="0" AutomationProperties.AutomationId="tabs-views" AutomationProperties.Name="视图页签">
             <TabItem Header="🖥 场景视图" AutomationProperties.AutomationId="tab-scene">
 
                 <!-- 场景视图：左场景列表 + 右模拟右键菜单 -->
@@ -187,41 +189,8 @@
                     </ScrollViewer>
                     </Border>
                 </StackPanel>
-
-                <!-- 选中项详情（点击菜单行显示） -->
-                <Border Grid.Column="1" Classes="card" Padding="12,10" Margin="10,0,0,0" MinWidth="280" MaxWidth="380"
-                        VerticalAlignment="Top" IsVisible="{Binding HasSelectedEntry}"
-                        AutomationProperties.AutomationId="panel-detail" AutomationProperties.Name="条目详情">
-                    <StackPanel Spacing="6">
-                        <TextBlock Text="详情" Classes="sectionTitle"/>
-                        <TextBlock Text="{Binding SelectedEntry.Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap"/>
-                        <Grid ColumnDefinitions="Auto,*" >
-                            <StackPanel Grid.Column="0" Spacing="3" Margin="0,0,10,0">
-                                <TextBlock Text="场景" Classes="cardLabel"/>
-                                <TextBlock Text="类型" Classes="cardLabel"/>
-                                <TextBlock Text="来源" Classes="cardLabel"/>
-                                <TextBlock Text="状态" Classes="cardLabel"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Spacing="3">
-                                <TextBlock Text="{Binding SelectedEntry.SceneLabel}"/>
-                                <TextBlock Text="{Binding SelectedEntry.KindText}"/>
-                                <TextBlock Text="{Binding SelectedEntry.SourceName}" TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding SelectedEntry.StatusText}"/>
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock Text="注册表键" Classes="cardLabel"/>
-                        <TextBlock FontSize="11.5" Opacity="0.7" TextWrapping="Wrap" Classes="mono"
-                                   Text="{Binding SelectedEntry.Model.RegistryPath}"/>
-                        <TextBlock Text="命令 / 目标" Classes="cardLabel"/>
-                        <TextBlock FontSize="11.5" Opacity="0.7" TextWrapping="Wrap" Classes="mono"
-                                   Text="{Binding SelectedEntry.Command}"/>
-                        <TextBlock Text="⚠ 该项指向的文件已不存在（卸载残留），可在列表页删除"
-                                   Foreground="#D13438" FontSize="12" TextWrapping="Wrap"
-                                   IsVisible="{Binding SelectedEntry.IsResidual}"/>
-                    </StackPanel>
-                </Border>
             </Grid>
-        </Grid>
+            </Grid>
 
             </TabItem>
 
@@ -274,7 +243,8 @@
                                     <ItemsControl ItemsSource="{Binding Items}" Margin="8,0,8,6">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Grid ColumnDefinitions="2*,90,60,90,Auto" Margin="2,4">
+                                                <Grid ColumnDefinitions="2*,90,60,90,Auto" Margin="2,4"
+                                                      Tapped="OnMenuRowTapped" Cursor="Hand">
                                                     <TextBlock Grid.Column="0" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                                AutomationProperties.Name="{Binding Title}"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding SceneLabel}" VerticalAlignment="Center" Opacity="0.65" FontSize="12"/>
@@ -316,5 +286,62 @@
         </DataGrid>
             </TabItem>
         </TabControl>
+
+        <!-- ============ 共享详情面板（三视图通用，点击条目显示） ============ -->
+        <Border Grid.Column="1" Classes="card" Padding="14,12" Margin="12,0,0,0" MinWidth="300" MaxWidth="400"
+                VerticalAlignment="Stretch" IsVisible="{Binding HasSelectedEntry}"
+                AutomationProperties.AutomationId="panel-detail" AutomationProperties.Name="条目详情">
+            <ScrollViewer>
+                <StackPanel Spacing="8">
+                    <TextBlock Text="详情" Classes="sectionTitle"/>
+                    <TextBlock Text="{Binding SelectedEntry.Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap"/>
+
+                    <!-- 基本属性 -->
+                    <Grid ColumnDefinitions="Auto,*">
+                        <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,10,0">
+                            <TextBlock Text="场景" Classes="cardLabel"/>
+                            <TextBlock Text="类型" Classes="cardLabel"/>
+                            <TextBlock Text="来源" Classes="cardLabel"/>
+                            <TextBlock Text="状态" Classes="cardLabel"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock Text="{Binding SelectedEntry.SceneLabel}"/>
+                            <TextBlock Text="{Binding SelectedEntry.KindText}"/>
+                            <TextBlock Text="{Binding SelectedEntry.SourceName}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedEntry.StatusText}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="⚠ 指向的文件已不存在（卸载残留），可在列表页删除"
+                               Foreground="#D13438" FontSize="12" TextWrapping="Wrap"
+                               IsVisible="{Binding SelectedEntry.IsResidual}"/>
+
+                    <!-- 注册表值与文件信息（实时读取） -->
+                    <TextBlock Text="注册表与文件信息" Classes="sectionTitle"/>
+                    <ItemsControl ItemsSource="{Binding DetailRows}"
+                                  AutomationProperties.AutomationId="list-detail-rows">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,3" AutomationProperties.Name="{Binding Label}">
+                                    <TextBlock Text="{Binding Label}" Classes="cardLabel"/>
+                                    <TextBlock Text="{Binding Value}" Classes="mono" FontSize="11.5" Opacity="0.75"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- 等效命令 -->
+                    <TextBlock Text="等效命令（管理员终端执行）" Classes="sectionTitle"/>
+                    <TextBox Classes="mono" Text="{Binding DetailCommands}" IsReadOnly="True" TextWrapping="Wrap"
+                             MinHeight="100" FontSize="11"
+                             AutomationProperties.AutomationId="tb-detail-commands"/>
+                    <Button Content="复制命令" Command="{Binding CopyDetailCommandsCommand}" HorizontalAlignment="Left"
+                            Padding="14,4"
+                            AutomationProperties.AutomationId="btn-copy-detail-commands"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+        </Grid>
     </DockPanel>
 </UserControl>

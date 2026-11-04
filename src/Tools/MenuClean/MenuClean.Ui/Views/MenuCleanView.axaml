@@ -47,7 +47,7 @@
     <DockPanel Margin="24,18">
         <!-- 顶部工具栏 -->
         <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto">
                 <TextBlock Grid.Column="0" Text="🧹 清理右键菜单" FontSize="16" FontWeight="SemiBold"
                            VerticalAlignment="Center" Margin="0,0,14,0"/>
                 <TextBox Grid.Column="1" Text="{Binding SearchText}" Watermark="🔍 搜索名称 / 来源 / 场景（列表页）"
@@ -89,7 +89,10 @@
                         </Flyout>
                     </Button.Flyout>
                 </Button>
-                <Button Grid.Column="5" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
+                <Button Grid.Column="5" Content="🔄 重启资源管理器" Command="{Binding RestartExplorerCommand}" Margin="8,0,0,0"
+                        ToolTip.Tip="扩展类（shellex）菜单项的禁用需资源管理器重启后生效；命令类（shell）项即时生效。桌面会闪一下属正常。"
+                        AutomationProperties.AutomationId="btn-restart-explorer" AutomationProperties.Name="重启资源管理器"/>
+                <Button Grid.Column="6" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
                         ToolTip.Tip="删除 HKLM 下的注册键需要管理员。"
                         AutomationProperties.AutomationId="btn-elevate"/>
             </Grid>

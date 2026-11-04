@@ -144,6 +144,22 @@ public partial class ShellExtViewModel : ObservableObject
         OnPropertyChanged(nameof(FilteredEntries));
     }
 
+    /// <summary>重启资源管理器（禁用/启用扩展后需新进程才生效；桌面会闪一下属正常）。</summary>
+    [RelayCommand]
+    private void RestartExplorer()
+    {
+        try
+        {
+            foreach (var p in System.Diagnostics.Process.GetProcessesByName("explorer")) p.Kill();
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe") { UseShellExecute = true });
+            AddLog("✔ 资源管理器已重启，扩展禁用/启用立即生效。");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"✘ 重启资源管理器失败：{ex.Message}");
+        }
+    }
+
     [RelayCommand]
     private void Elevate() => _host.ElevateRestart();
 }

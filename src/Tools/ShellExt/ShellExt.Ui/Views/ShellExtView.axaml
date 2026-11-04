@@ -6,7 +6,7 @@
     <DockPanel Margin="24,18">
         <!-- 顶部工具栏 -->
         <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
                 <TextBlock Grid.Column="0" Text="🧩 COM 扩展管理" FontSize="16" FontWeight="SemiBold"
                            VerticalAlignment="Center" Margin="0,0,14,0"/>
                 <ComboBox Grid.Column="1" Width="120" ItemsSource="{x:Static vm:ShellExtViewModel.KindFilters}"
@@ -17,7 +17,10 @@
                          AutomationProperties.AutomationId="tb-search" AutomationProperties.Name="搜索"/>
                 <Button Grid.Column="3" Content="↻ 扫描" Classes="accent" Command="{Binding ScanCommand}" Margin="8,0,0,0"
                         AutomationProperties.AutomationId="btn-scan" AutomationProperties.Name="扫描"/>
-                <Button Grid.Column="4" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
+                <Button Grid.Column="4" Content="🔄 重启资源管理器" Command="{Binding RestartExplorerCommand}" Margin="8,0,0,0"
+                        ToolTip.Tip="扩展的禁用/启用需要资源管理器重启后生效。桌面会闪一下属正常。"
+                        AutomationProperties.AutomationId="btn-restart-explorer" AutomationProperties.Name="重启资源管理器"/>
+                <Button Grid.Column="5" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
                         ToolTip.Tip="禁用/启用走 HKCU 黑名单（普通权限即可）；此项备用。"
                         AutomationProperties.AutomationId="btn-elevate"/>
             </Grid>

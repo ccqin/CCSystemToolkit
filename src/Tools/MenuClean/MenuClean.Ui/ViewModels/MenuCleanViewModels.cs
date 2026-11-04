@@ -405,6 +405,22 @@ public partial class MenuCleanViewModel : ObservableObject
     [RelayCommand]
     private void OpenBackups() => _backup.OpenFolder();
 
+    /// <summary>重启资源管理器（shellex 扩展的禁用需新进程生效；shell 命令项即时生效）。</summary>
+    [RelayCommand]
+    private void RestartExplorer()
+    {
+        try
+        {
+            foreach (var p in System.Diagnostics.Process.GetProcessesByName("explorer")) p.Kill();
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe") { UseShellExecute = true });
+            AddLog("✔ 资源管理器已重启，shellex 扩展的禁用/启用立即生效。");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"✘ 重启资源管理器失败：{ex.Message}");
+        }
+    }
+
     [RelayCommand]
     private void Elevate() => _host.ElevateRestart();
 }

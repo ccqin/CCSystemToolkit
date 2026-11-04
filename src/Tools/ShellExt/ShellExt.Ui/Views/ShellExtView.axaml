@@ -73,8 +73,7 @@
                 <DataGridTextColumn Header="来源" Binding="{Binding SourceName}" Width="1.2*"/>
                 <DataGridTextColumn Header="注册点" Binding="{Binding Occurrences}" Width="70"/>
                 <DataGridTextColumn Header="状态" Binding="{Binding StatusText}" Width="80"/>
-                <DataGridTextColumn Header="疑似菜单文字" Binding="{Binding SuspectedTexts}" Width="2.2*"/>
-                <DataGridTextColumn Header="DLL" Binding="{Binding Dll}" Width="2.2*"/>
+                <DataGridTextColumn Header="DLL" Binding="{Binding Dll}" Width="2.5*"/>
                 <DataGridTemplateColumn Header="启用" Width="80">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
@@ -86,6 +85,27 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
+            <DataGrid.RowDetailsTemplate>
+                <DataTemplate>
+                    <!-- 点击行展开的二级内容：疑似菜单文字 + DLL 信息 -->
+                    <Border Background="{DynamicResource SubtleFillColorSecondaryBrush}" Padding="14,10" Margin="0,2"
+                            AutomationProperties.AutomationId="row-details" AutomationProperties.Name="扩展详情">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="疑似菜单文字（DLL 字符串资源静态扫描，动态拼接的无法获取）" Classes="cardLabel"/>
+                            <ItemsControl ItemsSource="{Binding Model.SuspectedTexts}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" FontSize="12.5" Margin="6,1"
+                                                   AutomationProperties.Name="{Binding}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="DLL" Classes="cardLabel" Margin="0,6,0,0"/>
+                            <TextBlock Text="{Binding Dll}" Classes="mono" FontSize="11.5" Opacity="0.75" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </DataGrid.RowDetailsTemplate>
         </DataGrid>
     </DockPanel>
 

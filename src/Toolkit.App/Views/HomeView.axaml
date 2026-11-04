@@ -35,6 +35,10 @@
                                 HorizontalContentAlignment="Stretch"
                                 ToolTip.Tip="{Binding Description}">
                             <Panel>
+                                <!-- 全卡片命中兜底层：Fluent 模板的背景层不参与命中测试，
+                                     透明背景确保悬停高亮/点击在整个卡片区域生效（而非只有文字上） -->
+                                <Border Background="Transparent"/>
+
                                 <!-- 阴影装饰层：外扩 7px，不参与命中测试，随卡片一起动 -->
                                 <Border Classes="cardShadow" Margin="-7" IsHitTestVisible="False"/>
 

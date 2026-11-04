@@ -108,14 +108,6 @@ public partial class MenuCleanViewModel : ObservableObject
     public ObservableCollection<BackupFile> Backups { get; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSceneView), nameof(IsSourceView), nameof(IsListView))]
-    private int _viewMode;   // 0=场景 1=来源 2=列表
-
-    public bool IsSceneView => ViewMode == 0;
-    public bool IsSourceView => ViewMode == 1;
-    public bool IsListView => ViewMode == 2;
-
-    [ObservableProperty]
     private SceneItemViewModel? _selectedScene;
 
     /// <summary>当前场景的菜单项（模拟右键菜单渲染：系统→第三方→扩展，分隔线由视图处理两组渲染）。</summary>

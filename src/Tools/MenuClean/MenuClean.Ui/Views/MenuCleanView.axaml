@@ -4,11 +4,6 @@
              x:Class="MenuClean.Ui.Views.MenuCleanView">
 
     <UserControl.Styles>
-        <!-- 视图切换标签 -->
-        <Style Selector="RadioButton.tab">
-            <Setter Property="Padding" Value="14,5"/>
-            <Setter Property="Margin" Value="0"/>
-        </Style>
         <!-- 模拟右键菜单面板 -->
         <Style Selector="Border.menuPreview">
             <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorBaseBrush}"/>
@@ -52,26 +47,18 @@
     <DockPanel Margin="24,18">
         <!-- 顶部工具栏 -->
         <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
                 <TextBlock Grid.Column="0" Text="🧹 清理右键菜单" FontSize="16" FontWeight="SemiBold"
                            VerticalAlignment="Center" Margin="0,0,14,0"/>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <RadioButton Classes="tab" Content="场景视图" GroupName="view" IsChecked="{Binding IsSceneView, Mode=TwoWay}"
-                                 AutomationProperties.AutomationId="radio-scene"/>
-                    <RadioButton Classes="tab" Content="来源视图" GroupName="view" IsChecked="{Binding IsSourceView, Mode=TwoWay}"
-                                 AutomationProperties.AutomationId="radio-source"/>
-                    <RadioButton Classes="tab" Content="全量列表" GroupName="view" IsChecked="{Binding IsListView, Mode=TwoWay}"
-                                 AutomationProperties.AutomationId="radio-list"/>
-                </StackPanel>
-                <TextBox Grid.Column="3" Text="{Binding SearchText}" Watermark="🔍 搜索名称 / 来源 / 场景（列表视图）"
+                <TextBox Grid.Column="1" Text="{Binding SearchText}" Watermark="🔍 搜索名称 / 来源 / 场景（列表页）"
                          HorizontalAlignment="Right" MinWidth="220"
                          AutomationProperties.AutomationId="tb-search" AutomationProperties.Name="搜索"/>
-                <Button Grid.Column="4" Content="↻ 扫描" Classes="accent" Command="{Binding ScanCommand}" Margin="8,0,0,0"
+                <Button Grid.Column="2" Content="↻ 扫描" Classes="accent" Command="{Binding ScanCommand}" Margin="8,0,0,0"
                         AutomationProperties.AutomationId="btn-scan" AutomationProperties.Name="扫描"/>
-                <Button Grid.Column="5" Content="🧹 清理残留" Command="{Binding CleanResidualCommand}" Margin="8,0,0,0"
+                <Button Grid.Column="3" Content="🧹 清理残留" Command="{Binding CleanResidualCommand}" Margin="8,0,0,0"
                         ToolTip.Tip="删除全部指向已不存在文件的菜单项（自动 .reg 备份）。"
                         AutomationProperties.AutomationId="btn-clean-residual"/>
-                <Button Grid.Column="6" Content="📦 备份" Margin="8,0,0,0"
+                <Button Grid.Column="4" Content="📦 备份" Margin="8,0,0,0"
                         AutomationProperties.AutomationId="btn-backups" AutomationProperties.Name="备份管理">
                     <Button.Flyout>
                         <Flyout Placement="Bottom">
@@ -102,7 +89,7 @@
                         </Flyout>
                     </Button.Flyout>
                 </Button>
-                <Button Grid.Column="7" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
+                <Button Grid.Column="5" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
                         ToolTip.Tip="删除 HKLM 下的注册键需要管理员。"
                         AutomationProperties.AutomationId="btn-elevate"/>
             </Grid>
@@ -134,8 +121,12 @@
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" Opacity="0.7" Margin="2,10,0,0"
                    TextWrapping="Wrap" AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
 
-        <!-- ============ 视图 1：场景视图（模拟右键菜单） ============ -->
-        <Grid ColumnDefinitions="230,*" IsVisible="{Binding IsSceneView}">
+        <!-- ============ 三个 Tab 页 ============ -->
+        <TabControl AutomationProperties.AutomationId="tabs-views" AutomationProperties.Name="视图页签">
+            <TabItem Header="🖥 场景视图" AutomationProperties.AutomationId="tab-scene">
+
+                <!-- 场景视图：左场景列表 + 右模拟右键菜单 -->
+                <Grid ColumnDefinitions="230,*" Margin="0,10,0,0">
             <Border Classes="card" Padding="8" Margin="0,0,10,0">
                 <ListBox ItemsSource="{Binding Scenes}" SelectedItem="{Binding SelectedScene}"
                          Background="Transparent" AutomationProperties.AutomationId="list-scenes" AutomationProperties.Name="场景列表">
@@ -202,8 +193,11 @@
             </Grid>
         </Grid>
 
-        <!-- ============ 视图 2：来源视图（按软件聚合） ============ -->
-        <ScrollViewer IsVisible="{Binding IsSourceView}">
+            </TabItem>
+
+            <TabItem Header="📦 来源视图" AutomationProperties.AutomationId="tab-source">
+                <!-- 来源视图：按软件聚合 -->
+                <ScrollViewer Margin="0,10,0,0">
             <ItemsControl ItemsSource="{Binding SourceGroups}" Margin="2">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -235,12 +229,14 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <!-- ============ 视图 3：全量列表 ============ -->
-        <DataGrid ItemsSource="{Binding FilteredEntries}" SelectedItem="{Binding SelectedEntry}"
-                  AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="True"
-                  GridLinesVisibility="Horizontal" MinHeight="200"
-                  IsVisible="{Binding IsListView}"
-                  AutomationProperties.AutomationId="grid-entries" AutomationProperties.Name="菜单条目表">
+            </TabItem>
+
+            <TabItem Header="📋 全量列表" AutomationProperties.AutomationId="tab-list">
+                <!-- 全量列表 -->
+                <DataGrid ItemsSource="{Binding FilteredEntries}" SelectedItem="{Binding SelectedEntry}"
+                          AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="True"
+                          GridLinesVisibility="Horizontal" MinHeight="200" Margin="0,10,0,0"
+                          AutomationProperties.AutomationId="grid-entries" AutomationProperties.Name="菜单条目表">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="标记" Binding="{Binding BadgeText}" Width="90"/>
                 <DataGridTextColumn Header="名称" Binding="{Binding Title}" Width="230"/>
@@ -251,5 +247,7 @@
                 <DataGridTextColumn Header="目标文件" Binding="{Binding TargetPath}" Width="260"/>
             </DataGrid.Columns>
         </DataGrid>
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </UserControl>

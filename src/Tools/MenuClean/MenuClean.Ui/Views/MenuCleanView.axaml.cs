@@ -22,7 +22,7 @@ public partial class MenuCleanView : UserControl
     }
 
     /// <summary>点击场景视图菜单行 / 来源视图注入行 → 右侧共享详情面板显示该项。</summary>
-    private void OnMenuRowTapped(object? sender, TappedEventArgs e)
+    private void OnMenuRowTapped(object? sender, PointerPressedEventArgs e)
     {
         if (sender is Control { DataContext: EntryItemViewModel vm } && DataContext is MenuCleanViewModel mvm)
         {

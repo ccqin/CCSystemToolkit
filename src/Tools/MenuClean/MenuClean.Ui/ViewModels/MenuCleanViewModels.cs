@@ -138,28 +138,47 @@ public partial class MenuCleanViewModel : ObservableObject
     [ObservableProperty]
     private string _detailCommands = "";
 
+    /// <summary>关闭详情面板。</summary>
+    [RelayCommand]
+    private void CloseDetail() => SelectedEntry = null;
+
+    /// <summary>详情加载中（读取注册表值/文件版本信息在后台线程）。</summary>
+    [ObservableProperty]
+    private bool _isDetailLoading;
+
     partial void OnSelectedEntryChanged(EntryItemViewModel? value)
     {
-        DetailRows.Clear();
-        if (value?.Model is not { } m)
-        {
-            DetailCommands = "";
-            return;
-        }
+        OnPropertyChanged(nameof(HasSelectedEntry));
+        _ = LoadDetailsAsync(value);
+    }
 
+    private async Task LoadDetailsAsync(EntryItemViewModel? entry)
+    {
+        DetailRows.Clear();
+        DetailCommands = "";
+        if (entry?.Model is not { } m) return;
+
+        IsDetailLoading = true;
         try
         {
-            foreach (var row in _detail.GetDetails(m)) DetailRows.Add(row);
+            await Task.Delay(60);   // 让 loading 先渲染一帧
+            var rows = await Task.Run(() => _detail.GetDetails(m));
+            if (SelectedEntry != entry) return;   // 用户已切到别的条目
+
+            foreach (var row in rows) DetailRows.Add(row);
+            DetailCommands = string.Join(Environment.NewLine,
+                ":: 禁用（可逆）", MenuCleaner.CommandText(m, "disable"),
+                ":: 启用", MenuCleaner.CommandText(m, "enable"),
+                ":: 删除（先备份）", MenuCleaner.CommandText(m, "delete"));
         }
         catch (Exception ex)
         {
             DetailRows.Add(new DetailRow("读取失败", ex.Message));
         }
-
-        DetailCommands = string.Join(Environment.NewLine,
-            ":: 禁用（可逆）", MenuCleaner.CommandText(m, "disable"),
-            ":: 启用", MenuCleaner.CommandText(m, "enable"),
-            ":: 删除（先备份）", MenuCleaner.CommandText(m, "delete"));
+        finally
+        {
+            if (SelectedEntry == entry) IsDetailLoading = false;
+        }
     }
 
     // 统计卡

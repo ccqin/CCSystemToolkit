@@ -20,6 +20,7 @@
             <Setter Property="MinWidth" Value="420"/>
         </Style>
         <Style Selector="Border.menuRow">
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="CornerRadius" Value="5"/>
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Margin" Value="2,1"/>
@@ -166,14 +167,14 @@
                         <Run Text=" · 共 "/><Run Text="{Binding MenuItems.Count}" FontWeight="SemiBold"/><Run Text=" 项（点击行查看详情）"/>
                     </TextBlock>
 
-                    <!-- 模拟菜单预览：shell 组 + 分隔 + 扩展组（条目多时内部滚动） -->
-                    <Border Classes="menuPreview" VerticalAlignment="Top" MaxWidth="560" HorizontalAlignment="Left"
+                    <!-- 模拟菜单预览：拉伸填满左侧区域（详情面板打开时共享右侧；条目多时内部滚动） -->
+                    <Border Classes="menuPreview" VerticalAlignment="Top"
                             AutomationProperties.AutomationId="menu-preview" AutomationProperties.Name="菜单预览">
                     <ScrollViewer MaxHeight="500">
                         <ItemsControl ItemsSource="{Binding MenuItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Classes="menuRow" Tag="{Binding BadgeText}" Tapped="OnMenuRowTapped"
+                                    <Border Classes="menuRow" Tag="{Binding BadgeText}" PointerPressed="OnMenuRowTapped"
                                             AutomationProperties.Name="{Binding Title}">
                                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" Background="Transparent">
                                             <Border Grid.Column="0" Width="22" Height="22" CornerRadius="11" Margin="0,0,10,0"
@@ -254,7 +255,7 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid ColumnDefinitions="2*,90,60,90,Auto" Margin="2,4"
-                                                      Tapped="OnMenuRowTapped" Cursor="Hand">
+                                                      PointerPressed="OnMenuRowTapped" Cursor="Hand">
                                                     <TextBlock Grid.Column="0" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                                AutomationProperties.Name="{Binding Title}"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding SceneLabel}" VerticalAlignment="Center" Opacity="0.65" FontSize="12"/>
@@ -303,7 +304,13 @@
                 AutomationProperties.AutomationId="panel-detail" AutomationProperties.Name="条目详情">
             <ScrollViewer>
                 <StackPanel Spacing="8">
-                    <TextBlock Text="详情" Classes="sectionTitle"/>
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Button Grid.Column="0" Content="✕" Padding="8,2" FontSize="12"
+                                Command="{Binding CloseDetailCommand}"
+                                ToolTip.Tip="关闭详情面板"
+                                AutomationProperties.AutomationId="btn-close-detail" AutomationProperties.Name="关闭详情"/>
+                        <TextBlock Grid.Column="1" Text="详情" Classes="sectionTitle" Margin="8,8,0,0"/>
+                    </Grid>
                     <TextBlock Text="{Binding SelectedEntry.Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap"/>
 
                     <!-- 基本属性 -->
@@ -326,29 +333,37 @@
                                Foreground="#D13438" FontSize="12" TextWrapping="Wrap"
                                IsVisible="{Binding SelectedEntry.IsResidual}"/>
 
-                    <!-- 注册表值与文件信息（实时读取） -->
-                    <TextBlock Text="注册表与文件信息" Classes="sectionTitle"/>
-                    <ItemsControl ItemsSource="{Binding DetailRows}"
-                                  AutomationProperties.AutomationId="list-detail-rows">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="0,3" AutomationProperties.Name="{Binding Label}">
-                                    <TextBlock Text="{Binding Label}" Classes="cardLabel"/>
-                                    <TextBlock Text="{Binding Value}" Classes="mono" FontSize="11.5" Opacity="0.75"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <!-- 详情加载中（后台读取注册表值/文件版本） -->
+                    <StackPanel Spacing="10" IsVisible="{Binding IsDetailLoading}" Margin="0,8">
+                        <ProgressBar IsIndeterminate="True" MinWidth="200"/>
+                        <TextBlock Text="正在读取注册表值与文件信息…" Opacity="0.6" FontSize="12"/>
+                    </StackPanel>
 
-                    <!-- 等效命令 -->
-                    <TextBlock Text="等效命令（管理员终端执行）" Classes="sectionTitle"/>
-                    <TextBox Classes="mono" Text="{Binding DetailCommands}" IsReadOnly="True" TextWrapping="Wrap"
-                             MinHeight="100" FontSize="11"
-                             AutomationProperties.AutomationId="tb-detail-commands"/>
-                    <Button Content="复制命令" Command="{Binding CopyDetailCommandsCommand}" HorizontalAlignment="Left"
-                            Padding="14,4"
-                            AutomationProperties.AutomationId="btn-copy-detail-commands"/>
+                    <!-- 注册表值与文件信息（实时读取，后台线程） -->
+                    <StackPanel Spacing="8" IsVisible="{Binding !IsDetailLoading}">
+                        <TextBlock Text="注册表与文件信息" Classes="sectionTitle"/>
+                        <ItemsControl ItemsSource="{Binding DetailRows}"
+                                      AutomationProperties.AutomationId="list-detail-rows">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,3" AutomationProperties.Name="{Binding Label}">
+                                        <TextBlock Text="{Binding Label}" Classes="cardLabel"/>
+                                        <TextBlock Text="{Binding Value}" Classes="mono" FontSize="11.5" Opacity="0.75"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- 等效命令 -->
+                        <TextBlock Text="等效命令（管理员终端执行）" Classes="sectionTitle"/>
+                        <TextBox Classes="mono" Text="{Binding DetailCommands}" IsReadOnly="True" TextWrapping="Wrap"
+                                 MinHeight="100" FontSize="11"
+                                 AutomationProperties.AutomationId="tb-detail-commands"/>
+                        <Button Content="复制命令" Command="{Binding CopyDetailCommandsCommand}" HorizontalAlignment="Left"
+                                Padding="14,4"
+                                AutomationProperties.AutomationId="btn-copy-detail-commands"/>
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
         </Border>

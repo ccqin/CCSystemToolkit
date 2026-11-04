@@ -3,6 +3,15 @@
              xmlns:vm="using:ShellExt.Ui.ViewModels"
              x:Class="ShellExt.Ui.Views.ShellExtView">
 
+    <UserControl.Styles>
+        <!-- 扫描中遮罩 -->
+        <Style Selector="Border.busyOverlay">
+            <Setter Property="Background" Value="#66000000"/>
+            <Setter Property="ZIndex" Value="100"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Panel>
     <DockPanel Margin="24,18">
         <!-- 顶部工具栏 -->
         <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
@@ -16,6 +25,7 @@
                          HorizontalAlignment="Right" MinWidth="260"
                          AutomationProperties.AutomationId="tb-search" AutomationProperties.Name="搜索"/>
                 <Button Grid.Column="3" Content="↻ 扫描" Classes="accent" Command="{Binding ScanCommand}" Margin="8,0,0,0"
+                        IsEnabled="{Binding !IsBusy}"
                         AutomationProperties.AutomationId="btn-scan" AutomationProperties.Name="扫描"/>
                 <Button Grid.Column="4" Content="🔄 重启资源管理器" Command="{Binding RestartExplorerCommand}" Margin="8,0,0,0"
                         ToolTip.Tip="扩展的禁用/启用需要资源管理器重启后生效。桌面会闪一下属正常。"
@@ -77,4 +87,14 @@
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>
+
+    <!-- 扫描中遮罩（转圈进度条 + 当前扫描进度） -->
+    <Border Classes="busyOverlay" IsVisible="{Binding IsBusy}"
+            AutomationProperties.AutomationId="panel-busy" AutomationProperties.Name="扫描中">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
+            <ProgressBar IsIndeterminate="True" Width="240"/>
+            <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="13"/>
+        </StackPanel>
+    </Border>
+    </Panel>
 </UserControl>

@@ -188,13 +188,15 @@ public partial class MenuCleanViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Scan()
+    private async Task Scan()
     {
         if (IsBusy) return;
         IsBusy = true;
         try
         {
-            var models = _scanner.ScanAll((msg, _) => StatusText = msg);
+            await Task.Delay(120);   // 让遮罩先渲染一帧
+            IProgress<string> progress = new Progress<string>(msg => StatusText = msg);   // Report 自动回 UI 线程
+            var models = await Task.Run(() => _scanner.ScanAll((msg, _) => progress.Report(msg)));
 
             Entries.Clear();
             foreach (var m in models) Entries.Add(new EntryItemViewModel { Model = m });

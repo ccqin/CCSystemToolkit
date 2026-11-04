@@ -4,6 +4,11 @@
              x:Class="MenuClean.Ui.Views.MenuCleanView">
 
     <UserControl.Styles>
+        <!-- 扫描中遮罩 -->
+        <Style Selector="Border.busyOverlay">
+            <Setter Property="Background" Value="#66000000"/>
+            <Setter Property="ZIndex" Value="100"/>
+        </Style>
         <!-- 模拟右键菜单面板 -->
         <Style Selector="Border.menuPreview">
             <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorBaseBrush}"/>
@@ -44,6 +49,7 @@
         </Style>
     </UserControl.Styles>
 
+    <Panel>
     <DockPanel Margin="24,18">
         <!-- 顶部工具栏 -->
         <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
@@ -54,6 +60,7 @@
                          HorizontalAlignment="Right" MinWidth="220"
                          AutomationProperties.AutomationId="tb-search" AutomationProperties.Name="搜索"/>
                 <Button Grid.Column="2" Content="↻ 扫描" Classes="accent" Command="{Binding ScanCommand}" Margin="8,0,0,0"
+                        IsEnabled="{Binding !IsBusy}"
                         AutomationProperties.AutomationId="btn-scan" AutomationProperties.Name="扫描"/>
                 <Button Grid.Column="3" Content="🧹 清理残留" Command="{Binding CleanResidualCommand}" Margin="8,0,0,0"
                         ToolTip.Tip="删除全部指向已不存在文件的菜单项（自动 .reg 备份）。"
@@ -347,4 +354,14 @@
         </Border>
         </Grid>
     </DockPanel>
+
+    <!-- 扫描中遮罩（转圈进度条 + 当前扫描进度） -->
+    <Border Classes="busyOverlay" IsVisible="{Binding IsBusy}"
+            AutomationProperties.AutomationId="panel-busy" AutomationProperties.Name="扫描中">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
+            <ProgressBar IsIndeterminate="True" Width="240"/>
+            <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="13"/>
+        </StackPanel>
+    </Border>
+    </Panel>
 </UserControl>

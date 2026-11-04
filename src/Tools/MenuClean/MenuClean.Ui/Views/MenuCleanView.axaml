@@ -1,0 +1,255 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MenuClean.Ui.ViewModels"
+             x:Class="MenuClean.Ui.Views.MenuCleanView">
+
+    <UserControl.Styles>
+        <!-- 视图切换标签 -->
+        <Style Selector="RadioButton.tab">
+            <Setter Property="Padding" Value="14,5"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+        <!-- 模拟右键菜单面板 -->
+        <Style Selector="Border.menuPreview">
+            <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorBaseBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BoxShadow" Value="0 4 14 0 #33000000"/>
+            <Setter Property="Padding" Value="4,3"/>
+            <Setter Property="MinWidth" Value="420"/>
+        </Style>
+        <Style Selector="Border.menuRow">
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="2,1"/>
+        </Style>
+        <Style Selector="Border.menuRow:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+        <!-- 菜单项文字：禁用项变灰 -->
+        <Style Selector="Border.menuRow TextBlock.menuTitle">
+            <Setter Property="FontSize" Value="13.5"/>
+        </Style>
+        <Style Selector="Border.menuRow[Tag=off] TextBlock.menuTitle">
+            <Setter Property="Opacity" Value="0.4"/>
+            <Setter Property="TextDecorations" Value="Strikethrough"/>
+        </Style>
+        <Style Selector="Border.menuRow[Tag=residual] TextBlock.menuTitle">
+            <Setter Property="Foreground" Value="#D13438"/>
+        </Style>
+        <!-- 场景侧栏项 -->
+        <Style Selector="ListBoxItem.sceneItem">
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <!-- 来源组行 -->
+        <Style Selector="Border.sourceRow:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Margin="24,18">
+        <!-- 顶部工具栏 -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto">
+                <TextBlock Grid.Column="0" Text="🧹 清理右键菜单" FontSize="16" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="0,0,14,0"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton Classes="tab" Content="场景视图" GroupName="view" IsChecked="{Binding IsSceneView, Mode=TwoWay}"
+                                 AutomationProperties.AutomationId="radio-scene"/>
+                    <RadioButton Classes="tab" Content="来源视图" GroupName="view" IsChecked="{Binding IsSourceView, Mode=TwoWay}"
+                                 AutomationProperties.AutomationId="radio-source"/>
+                    <RadioButton Classes="tab" Content="全量列表" GroupName="view" IsChecked="{Binding IsListView, Mode=TwoWay}"
+                                 AutomationProperties.AutomationId="radio-list"/>
+                </StackPanel>
+                <TextBox Grid.Column="3" Text="{Binding SearchText}" Watermark="🔍 搜索名称 / 来源 / 场景（列表视图）"
+                         HorizontalAlignment="Right" MinWidth="220"
+                         AutomationProperties.AutomationId="tb-search" AutomationProperties.Name="搜索"/>
+                <Button Grid.Column="4" Content="↻ 扫描" Classes="accent" Command="{Binding ScanCommand}" Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="btn-scan" AutomationProperties.Name="扫描"/>
+                <Button Grid.Column="5" Content="🧹 清理残留" Command="{Binding CleanResidualCommand}" Margin="8,0,0,0"
+                        ToolTip.Tip="删除全部指向已不存在文件的菜单项（自动 .reg 备份）。"
+                        AutomationProperties.AutomationId="btn-clean-residual"/>
+                <Button Grid.Column="6" Content="📦 备份" Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="btn-backups" AutomationProperties.Name="备份管理">
+                    <Button.Flyout>
+                        <Flyout Placement="Bottom">
+                            <StackPanel Width="440" Spacing="8" Margin="2,4">
+                                <TextBlock Text="备份与还原" FontWeight="SemiBold"/>
+                                <TextBlock Text="删除/清理操作前自动导出 .reg 备份。选中一条还原：" Opacity="0.6" FontSize="12"/>
+                                <ListBox ItemsSource="{Binding Backups}" MinHeight="120" MaxHeight="260"
+                                         AutomationProperties.AutomationId="list-backups">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding FileName}" FontSize="12.5" AutomationProperties.Name="{Binding FileName}"/>
+                                                    <TextBlock FontSize="11" Opacity="0.55">
+                                                        <Run Text="{Binding Time}"/> · <Run Text="{Binding Size}"/> 字节
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Content="还原" FontSize="12" Padding="10,3"
+                                                        Command="{Binding $parent[ListBox].DataContext.RestoreBackupCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        AutomationProperties.AutomationId="btn-restore"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <Button Content="打开备份目录…" Command="{Binding OpenBackupsCommand}" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <Button Grid.Column="7" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
+                        ToolTip.Tip="删除 HKLM 下的注册键需要管理员。"
+                        AutomationProperties.AutomationId="btn-elevate"/>
+            </Grid>
+        </Border>
+
+        <!-- 统计卡 + Win11 提示 -->
+        <Border DockPanel.Dock="Top" Margin="0,0,0,12">
+            <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="*,*,*,*">
+                    <Border Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="全部条目" Classes="cardLabel"/><TextBlock Text="{Binding TotalCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="第三方注入" Classes="cardLabel"/><TextBlock Text="{Binding ThirdPartyCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="⚠ 残留" Classes="cardLabel"/><TextBlock Text="{Binding ResidualCount}" Classes="cardValue" Foreground="#D13438"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Classes="card" Padding="12,8">
+                        <StackPanel><TextBlock Text="已禁用" Classes="cardLabel"/><TextBlock Text="{Binding DisabledCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                </Grid>
+                <TextBlock Text="ℹ Windows 11：本工具管理经典右键菜单（「显示更多选项」/ Shift+F10 中的项）。禁用完全可逆，删除前自动备份。"
+                           Opacity="0.6" FontSize="12"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 状态行 -->
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" Opacity="0.7" Margin="2,10,0,0"
+                   TextWrapping="Wrap" AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
+
+        <!-- ============ 视图 1：场景视图（模拟右键菜单） ============ -->
+        <Grid ColumnDefinitions="230,*" IsVisible="{Binding IsSceneView}">
+            <Border Classes="card" Padding="8" Margin="0,0,10,0">
+                <ListBox ItemsSource="{Binding Scenes}" SelectedItem="{Binding SelectedScene}"
+                         Background="Transparent" AutomationProperties.AutomationId="list-scenes" AutomationProperties.Name="场景列表">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <TextBlock Grid.Column="0" Text="{Binding Glyph}" FontSize="16" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Label}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           AutomationProperties.Name="{Binding Label}"/>
+                                <Border Grid.Column="2" CornerRadius="8" Padding="7,1" Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+                                    <TextBlock Text="{Binding Count}" FontSize="11" Opacity="0.7"/>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <Grid ColumnDefinitions="*,Auto" Grid.Column="1">
+                <!-- 模拟菜单预览：shell 组 + 分隔 + 扩展组 -->
+                <Border Classes="menuPreview" VerticalAlignment="Top" MaxWidth="560" HorizontalAlignment="Left"
+                        AutomationProperties.AutomationId="menu-preview" AutomationProperties.Name="菜单预览">
+                    <StackPanel Spacing="1">
+                        <ItemsControl ItemsSource="{Binding MenuItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Classes="menuRow" Tag="{Binding BadgeText}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" Background="Transparent">
+                                            <Border Grid.Column="0" Width="22" Height="22" CornerRadius="11" Margin="0,0,10,0"
+                                                    Background="{DynamicResource AccentFillColorDefaultBrush}" Opacity="0.85">
+                                                <TextBlock Text="{Binding FirstChar}" Foreground="White" FontSize="11" FontWeight="Bold"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                <TextBlock Classes="menuTitle" Text="{Binding Title}"/>
+                                                <TextBlock Text="{Binding BadgeText}" FontSize="10.5" Opacity="0.65" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{Binding SourceName}" FontSize="11" Opacity="0.5"
+                                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                                          Command="{Binding $parent[UserControl].DataContext.ToggleEntryCommand}"
+                                                          CommandParameter="{Binding}"
+                                                          AutomationProperties.AutomationId="switch-entry" AutomationProperties.Name="{Binding Title}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- 选中项详情 -->
+                <Border Grid.Column="1" Classes="card" Padding="12,10" Margin="10,0,0,0" MinWidth="260" MaxWidth="360"
+                        VerticalAlignment="Top" IsVisible="{Binding HasSelectedEntry}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="详情" Classes="sectionTitle"/>
+                        <TextBlock Text="{Binding SelectedEntry.Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock FontSize="11.5" Opacity="0.65" TextWrapping="Wrap" Classes="mono"
+                                   Text="{Binding SelectedEntry.Model.RegistryPath}"/>
+                        <TextBlock FontSize="11.5" Opacity="0.65" TextWrapping="Wrap" Classes="mono"
+                                   Text="{Binding SelectedEntry.Command}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ============ 视图 2：来源视图（按软件聚合） ============ -->
+        <ScrollViewer IsVisible="{Binding IsSourceView}">
+            <ItemsControl ItemsSource="{Binding SourceGroups}" Margin="2">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Classes="card sourceRow" Padding="14,10" Margin="0,0,0,8">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <TextBlock Grid.Column="0" Text="📦" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"
+                                                   AutomationProperties.Name="{Binding Name}"/>
+                                        <TextBlock Text="系统" FontSize="10.5" Opacity="0.55" VerticalAlignment="Center"
+                                                   IsVisible="{Binding IsSystem}"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Summary}" FontSize="12" Opacity="0.6"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Button Content="全部禁用" Command="{Binding $parent[ItemsControl].DataContext.ToggleSourceCommand}"
+                                            CommandParameter="{Binding}" FontSize="12.5"
+                                            AutomationProperties.AutomationId="btn-source-disable"/>
+                                    <Button Content="全部启用" Classes="accent"
+                                            Command="{Binding $parent[ItemsControl].DataContext.ToggleSourceCommand}"
+                                            CommandParameter="{Binding}" FontSize="12.5"
+                                            AutomationProperties.AutomationId="btn-source-enable"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- ============ 视图 3：全量列表 ============ -->
+        <DataGrid ItemsSource="{Binding FilteredEntries}" SelectedItem="{Binding SelectedEntry}"
+                  AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="True"
+                  GridLinesVisibility="Horizontal" MinHeight="200"
+                  IsVisible="{Binding IsListView}"
+                  AutomationProperties.AutomationId="grid-entries" AutomationProperties.Name="菜单条目表">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="标记" Binding="{Binding BadgeText}" Width="90"/>
+                <DataGridTextColumn Header="名称" Binding="{Binding Title}" Width="230"/>
+                <DataGridTextColumn Header="场景" Binding="{Binding SceneLabel}" Width="110"/>
+                <DataGridTextColumn Header="类型" Binding="{Binding KindText}" Width="60"/>
+                <DataGridTextColumn Header="来源" Binding="{Binding SourceName}" Width="150"/>
+                <DataGridTextColumn Header="状态" Binding="{Binding StatusText}" Width="90"/>
+                <DataGridTextColumn Header="目标文件" Binding="{Binding TargetPath}" Width="260"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

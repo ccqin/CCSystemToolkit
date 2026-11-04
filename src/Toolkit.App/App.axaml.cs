@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using MenuClean.Ui;
 using NetRouteList.Ui;
 using PermDoctor.Ui;
 using Toolkit.App.Tools;
@@ -26,6 +27,7 @@ public partial class App : Application
             [
                 new NetRouteListToolModule { Host = main },
                 new PermDoctorToolModule { Host = main },
+                new MenuCleanToolModule { Host = main },
                 new LogsToolModule(main) { Host = main },
                 // 未来工具在此追加……
             ], new HomeView { DataContext = main });

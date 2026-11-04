@@ -249,7 +249,7 @@ public partial class MenuCleanViewModel : ObservableObject
     private void RebuildSources()
     {
         SourceGroups.Clear();
-        foreach (var g in Entries.GroupBy(e => e.SourceName).OrderBy(g => g.Key))
+        foreach (var g in Entries.Where(MatchesSearch).GroupBy(e => e.SourceName).OrderBy(g => g.Key))
         {
             var group = new SourceGroupViewModel { Name = g.Key };
             group.Items.AddRange(g);
@@ -263,21 +263,40 @@ public partial class MenuCleanViewModel : ObservableObject
     {
         if (SelectedScene is not { } scene) { MenuItems = []; return; }
         MenuItems = Entries.Where(scene.Match)
+            .Where(MatchesSearch)
             .OrderBy(e => e.Order)
             .ThenBy(e => e.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();
         scene.Count = MenuItems.Count;
     }
 
-    partial void OnSearchTextChanged(string value) => OnPropertyChanged(nameof(Entries));
+    partial void OnSearchTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(FilteredEntries));   // 列表页刷新
+        UpdateMenuItems();                            // 场景视图菜单过滤
+        RebuildSources();                             // 来源视图分组过滤
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            StatusText = $"🔍 已过滤：{Entries.Count(MatchesSearch)} / {Entries.Count} 项匹配“{value}”（三个视图同时生效）";
+        }
+    }
+
+    /// <summary>单个条目是否匹配搜索（名称/来源/场景/注册表键）。</summary>
+    private bool MatchesSearch(EntryItemViewModel e)
+    {
+        if (string.IsNullOrWhiteSpace(SearchText)) return true;
+        return e.Title.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+               || e.SourceName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+               || e.SceneLabel.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+               || e.Model.RegistryPath.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+               || (e.Model.TargetPath?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
 
     /// <summary>列表视图过滤（搜索 + 全量）。</summary>
     public IEnumerable<EntryItemViewModel> FilteredEntries =>
         string.IsNullOrWhiteSpace(SearchText)
             ? Entries
-            : Entries.Where(e => e.Title.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-                || e.SourceName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-                || e.SceneLabel.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+            : Entries.Where(MatchesSearch);
 
     [RelayCommand]
     private void ToggleEntry(EntryItemViewModel entry)

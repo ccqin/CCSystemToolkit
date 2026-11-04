@@ -217,12 +217,27 @@ public sealed class ContextMenuScanner
                 var (publisher, residual) = InspectTarget(dll);
                 bool isBlocked = blocked.Contains(clsid, StringComparer.OrdinalIgnoreCase);
 
+                // 标题优先用 DLL 的文件描述（如“夸克网盘右键菜单”，可读可搜索）；
+                // COM 扩展的真实菜单文字（如“发送到手机”）是 DLL 运行时生成的，注册表里不存在
+                var displayTitle = title;
+                try
+                {
+                    if (dll is not null && File.Exists(dll))
+                    {
+                        var desc = FileVersionInfo.GetVersionInfo(dll).FileDescription;
+                        if (!string.IsNullOrWhiteSpace(desc)) displayTitle = desc!;
+                    }
+                }
+                catch
+                {
+                }
+
                 entries.Add(new MenuEntry
                 {
                     RegistryPath = $@"{path}\{handler}",
                     HiveRoot = ResolveHiveRoot($@"{path}\{handler}"),
                     VerbName = handler,
-                    Title = title,
+                    Title = displayTitle,
                     Command = dll,
                     TargetPath = dll,
                     Kind = MenuEntryKind.Shellex,

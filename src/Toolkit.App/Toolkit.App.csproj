@@ -30,6 +30,7 @@
     <ProjectReference Include="..\Tools\NetRouteList\NetRouteList.Ui\NetRouteList.Ui.csproj" />
     <ProjectReference Include="..\Tools\PermDoctor\PermDoctor.Ui\PermDoctor.Ui.csproj" />
     <ProjectReference Include="..\Tools\MenuClean\MenuClean.Ui\MenuClean.Ui.csproj" />
+    <ProjectReference Include="..\Tools\ShellExt\ShellExt.Ui\ShellExt.Ui.csproj" />
   </ItemGroup>
 
 </Project>

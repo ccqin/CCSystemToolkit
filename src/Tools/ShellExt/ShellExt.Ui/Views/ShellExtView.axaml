@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ShellExt.Ui.ViewModels"
+             x:Class="ShellExt.Ui.Views.ShellExtView">
+
+    <DockPanel Margin="24,18">
+        <!-- 顶部工具栏 -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+                <TextBlock Grid.Column="0" Text="🧩 COM 扩展管理" FontSize="16" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="0,0,14,0"/>
+                <ComboBox Grid.Column="1" Width="120" ItemsSource="{x:Static vm:ShellExtViewModel.KindFilters}"
+                          SelectedItem="{Binding KindFilter}"
+                          AutomationProperties.AutomationId="combo-kind" AutomationProperties.Name="类型筛选"/>
+                <TextBox Grid.Column="2" Text="{Binding SearchText}" Watermark="🔍 搜索描述 / CLSID / DLL（含 Approved 官方描述）"
+                         HorizontalAlignment="Right" MinWidth="260"
+                         AutomationProperties.AutomationId="tb-search" AutomationProperties.Name="搜索"/>
+                <Button Grid.Column="3" Content="↻ 扫描" Classes="accent" Command="{Binding ScanCommand}" Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="btn-scan" AutomationProperties.Name="扫描"/>
+                <Button Grid.Column="4" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
+                        ToolTip.Tip="禁用/启用走 HKCU 黑名单（普通权限即可）；此项备用。"
+                        AutomationProperties.AutomationId="btn-elevate"/>
+            </Grid>
+        </Border>
+
+        <!-- 统计卡 + 说明 -->
+        <Border DockPanel.Dock="Top" Margin="0,0,0,12">
+            <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="*,*,*,*">
+                    <Border Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="扩展总数" Classes="cardLabel"/><TextBlock Text="{Binding TotalCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="⚠ 残留" Classes="cardLabel"/><TextBlock Text="{Binding ResidualCount}" Classes="cardValue" Foreground="#D13438"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="已禁用" Classes="cardLabel"/><TextBlock Text="{Binding DisabledCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Classes="card" Padding="12,8">
+                        <StackPanel><TextBlock Text="图标叠加" Classes="cardLabel"/><TextBlock Text="{Binding OverlayCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                </Grid>
+                <TextBlock Text="ℹ COM 扩展（Shell Extension）：右键菜单里的动态项（如“发送到手机”）、图标叠加（OneDrive 绿勾）、缩略图、预览窗格都是它。描述来自系统 Approved 官方清单；禁用 = 黑名单拦截（可逆），资源管理器重启后生效。"
+                           Opacity="0.6" FontSize="12" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 状态行 -->
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" Opacity="0.7" Margin="2,10,0,0"
+                   TextWrapping="Wrap" AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
+
+        <!-- 列表 -->
+        <DataGrid ItemsSource="{Binding FilteredEntries}" AutoGenerateColumns="False" IsReadOnly="True"
+                  CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                  AutomationProperties.AutomationId="grid-exts" AutomationProperties.Name="扩展列表">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="标记" Binding="{Binding BadgeText}" Width="90"/>
+                <DataGridTextColumn Header="类型" Binding="{Binding KindText}" Width="90"/>
+                <DataGridTextColumn Header="描述" Binding="{Binding Description}" Width="2*"/>
+                <DataGridTextColumn Header="来源" Binding="{Binding SourceName}" Width="1.2*"/>
+                <DataGridTextColumn Header="注册点" Binding="{Binding Occurrences}" Width="70"/>
+                <DataGridTextColumn Header="状态" Binding="{Binding StatusText}" Width="80"/>
+                <DataGridTextColumn Header="DLL" Binding="{Binding Dll}" Width="2.5*"/>
+                <DataGridTemplateColumn Header="启用" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ToggleSwitch IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                          Command="{Binding $parent[UserControl].DataContext.ToggleEntryCommand}"
+                                          CommandParameter="{Binding}"
+                                          AutomationProperties.AutomationId="switch-ext" AutomationProperties.Name="{Binding Description}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

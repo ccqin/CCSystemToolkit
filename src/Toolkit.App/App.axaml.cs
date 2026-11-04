@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using MenuClean.Ui;
 using NetRouteList.Ui;
 using PermDoctor.Ui;
+using ShellExt.Ui;
 using Toolkit.App.Tools;
 using Toolkit.App.ViewModels;
 using Toolkit.App.Views;
@@ -28,6 +29,7 @@ public partial class App : Application
                 new NetRouteListToolModule { Host = main },
                 new PermDoctorToolModule { Host = main },
                 new MenuCleanToolModule { Host = main },
+                new ShellExtToolModule { Host = main },
                 new LogsToolModule(main) { Host = main },
                 // 未来工具在此追加……
             ], new HomeView { DataContext = main });

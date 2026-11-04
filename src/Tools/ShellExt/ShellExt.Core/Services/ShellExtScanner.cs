@@ -122,7 +122,12 @@ public sealed class ShellExtScanner
     {
         if (byClsid.TryGetValue(clsid, out var existing)) return existing;
 
-        string? dll = null, threading = null;
+        string? dll = null, threading = null, clsidName = null;
+        if (Registry.ClassesRoot.OpenSubKey($@"CLSID\{clsid}") is { } clsidKey)
+        {
+            clsidName = (clsidKey.GetValue(null) as string)?.Trim();
+            clsidKey.Dispose();
+        }
         if (Registry.ClassesRoot.OpenSubKey($@"CLSID\{clsid}\InprocServer32") is { } inproc)
         {
             dll = inproc.GetValue(null) as string;
@@ -147,10 +152,15 @@ public sealed class ShellExtScanner
         bool isSystem = publisher?.Contains("Microsoft", StringComparison.OrdinalIgnoreCase) == true
                         || dll?.StartsWith(@"C:\Windows", StringComparison.OrdinalIgnoreCase) == true;
 
+        // 疑似菜单文字：DLL 字符串资源启发式扫描（纯数据映射，不执行代码）；系统项跳过减少扫描量
+        var suspected = dll is not null && File.Exists(dll) && !isSystem
+            ? SuspectedTextScanner.Scan(dll)
+            : [];
+
         var entry = new ShellExtEntry
         {
             Clsid = clsid,
-            Description = approved.GetValueOrDefault(clsid) ?? nameHint,
+            Description = approved.GetValueOrDefault(clsid) ?? clsidName ?? nameHint,
             Kind = ShellExtKind.Unknown,
             Status = blocked.Contains(clsid) ? ShellExtStatus.Blocked : ShellExtStatus.Enabled,
             Dll = dll,
@@ -158,6 +168,7 @@ public sealed class ShellExtScanner
             Publisher = publisher,
             IsResidual = residual,
             IsSystem = isSystem,
+            SuspectedTexts = suspected,
         };
         byClsid[clsid] = entry;
         return entry;

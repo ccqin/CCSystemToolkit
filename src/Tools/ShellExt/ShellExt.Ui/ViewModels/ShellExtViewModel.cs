@@ -22,6 +22,9 @@ public partial class ExtItemViewModel : ObservableObject
     public bool IsResidual => Model.IsResidual;
     public bool IsSystem => Model.IsSystem;
 
+    /// <summary>疑似菜单文字（DLL 字符串资源扫描）。</summary>
+    public string SuspectedTexts => Model.SuspectedTextsText;
+
     public string BadgeText => Model.IsResidual ? "⚠ 残留" : Model.IsSystem ? "✔ 系统" : !Model.IsEnabled ? "⊘ 已禁用" : "";
 
     [ObservableProperty]
@@ -82,6 +85,7 @@ public partial class ShellExtViewModel : ObservableObject
                 q = q.Where(e => e.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
                     || e.Clsid.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
                     || e.SourceName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                    || e.SuspectedTexts.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
                     || (e.Dll?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false));
             }
             return q;

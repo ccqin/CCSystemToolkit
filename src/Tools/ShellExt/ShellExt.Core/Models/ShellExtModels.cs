@@ -45,6 +45,12 @@ public sealed class ShellExtEntry
     /// <summary>在多少个注册点被引用（文件类型 × 扩展类型）。</summary>
     public int Occurrences { get; set; }
 
+    /// <summary>疑似菜单/界面文字（DLL 字符串资源启发式扫描，静态分析，动态拼接的无法获取）。</summary>
+    public List<string> SuspectedTexts { get; set; } = [];
+
+    /// <summary>疑似文字的拼接展示（表格列用）。</summary>
+    public string SuspectedTextsText => SuspectedTexts.Count == 0 ? "" : string.Join(" / ", SuspectedTexts);
+
     public string KindText => Kind switch
     {
         ShellExtKind.ContextMenu => "右键菜单",

@@ -53,7 +53,8 @@
         <!-- ===== 主页工具卡片 ===== -->
         <Style Selector="Button.toolcard">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
+            <!-- 薄边框用分隔线色（比 CardStroke 深一档）：无/淡背景时卡片仍有清晰轮廓，不与页面背景融为一体 -->
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Padding" Value="0"/>

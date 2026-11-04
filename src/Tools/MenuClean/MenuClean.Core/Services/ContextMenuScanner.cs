@@ -58,12 +58,12 @@ public sealed class ContextMenuScanner
         return entries;
     }
 
-    /// <summary>发现哪些后缀（SystemFileAssociations 与 HKCR\.ext 直挂）有自定义菜单项。</summary>
+    /// <summary>发现哪些后缀有自定义菜单项：SystemFileAssociations / HKCR\.ext 直挂 / .ext→ProgID 间接。</summary>
     private void ScanExtensionScenes(List<MenuEntry> entries)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // SystemFileAssociations\.xxx\shell
+        // A. SystemFileAssociations\.xxx\shell
         using (var sfa = Registry.ClassesRoot.OpenSubKey("SystemFileAssociations"))
         {
             if (sfa is not null)
@@ -78,19 +78,46 @@ public sealed class ContextMenuScanner
             }
         }
 
-        // HKCR\.xxx\shell（ProgID 直挂；数量可控，只处理有 shell 子键的）
-        foreach (var ext in Registry.ClassesRoot.GetSubKeyNames().Where(n => n.StartsWith('.') && n.Length <= 10))
+        // B/C. 遍历 HKCR\.xxx：直挂 shell 与 ProgID 间接（.exe→exefile 等，多数第三方菜单注册在 ProgID 下）
+        var extKeys = new List<(string Ext, string? ProgId)>();
+        foreach (var ext in Registry.ClassesRoot.GetSubKeyNames().Where(n => n.StartsWith('.') && n.Length <= 12))
         {
             try
             {
-                if (CountShellChildren(Registry.ClassesRoot, $@"{ext}\shell") == 0) continue;
-                if (!seen.Add(ext.ToLowerInvariant())) continue;
-                var def = new SceneDef([ext], MenuSceneKind.FileExtension, ext, "🧩");
-                ScanShell($@"{ext}\shell", def, entries);
+                using var k = Registry.ClassesRoot.OpenSubKey(ext);
+                if (k is null) continue;
+                var progId = k.GetValue(null) as string;
+                extKeys.Add((ext, string.IsNullOrWhiteSpace(progId) || progId.StartsWith('.') ? null : progId));
             }
             catch
             {
                 // 个别键访问受限，跳过
+            }
+        }
+
+        foreach (var (ext, progId) in extKeys)
+        {
+            try
+            {
+                // B. .xxx\shell 直挂
+                if (CountShellChildren(Registry.ClassesRoot, $@"{ext}\shell") > 0 && seen.Add(ext.ToLowerInvariant()))
+                {
+                    var def = new SceneDef([ext], MenuSceneKind.FileExtension, ext, "🧩");
+                    ScanShell($@"{ext}\shell", def, entries);
+                }
+
+                // C. .xxx → ProgID（exefile/txtfile/jpegfile…）：菜单在 HKCR\<ProgID>\shell 与 shellex
+                if (progId is null) continue;
+                bool hasShell = CountShellChildren(Registry.ClassesRoot, $@"{progId}\shell") > 0;
+                bool hasShellex = CountShellChildren(Registry.ClassesRoot, $@"{progId}\shellex\ContextMenuHandlers") > 0;
+                if (!hasShell && !hasShellex) continue;
+
+                var pd = new SceneDef([progId], MenuSceneKind.FileExtension, ext, "🧩");
+                if (hasShell) ScanShell($@"{progId}\shell", pd, entries);
+                ScanShellex($@"{progId}\shellex\ContextMenuHandlers", pd, entries);
+            }
+            catch
+            {
             }
         }
     }

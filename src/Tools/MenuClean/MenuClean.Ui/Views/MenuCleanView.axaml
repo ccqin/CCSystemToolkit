@@ -146,14 +146,23 @@
             </Border>
 
             <Grid ColumnDefinitions="*,Auto" Grid.Column="1">
-                <!-- 模拟菜单预览：shell 组 + 分隔 + 扩展组（条目多时内部滚动） -->
-                <Border Classes="menuPreview" VerticalAlignment="Top" MaxWidth="560" HorizontalAlignment="Left"
-                        AutomationProperties.AutomationId="menu-preview" AutomationProperties.Name="菜单预览">
+                <StackPanel Grid.Column="0" Spacing="6">
+                    <!-- 场景计数标题 -->
+                    <TextBlock FontSize="13" Opacity="0.7"
+                               AutomationProperties.AutomationId="tb-scene-count" AutomationProperties.Name="场景条目数">
+                        <Run Text="当前场景："/><Run Text="{Binding SelectedScene.Label}" FontWeight="SemiBold"/>
+                        <Run Text=" · 共 "/><Run Text="{Binding MenuItems.Count}" FontWeight="SemiBold"/><Run Text=" 项（点击行查看详情）"/>
+                    </TextBlock>
+
+                    <!-- 模拟菜单预览：shell 组 + 分隔 + 扩展组（条目多时内部滚动） -->
+                    <Border Classes="menuPreview" VerticalAlignment="Top" MaxWidth="560" HorizontalAlignment="Left"
+                            AutomationProperties.AutomationId="menu-preview" AutomationProperties.Name="菜单预览">
                     <ScrollViewer MaxHeight="500">
                         <ItemsControl ItemsSource="{Binding MenuItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Classes="menuRow" Tag="{Binding BadgeText}">
+                                    <Border Classes="menuRow" Tag="{Binding BadgeText}" Tapped="OnMenuRowTapped"
+                                            AutomationProperties.Name="{Binding Title}">
                                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" Background="Transparent">
                                             <Border Grid.Column="0" Width="22" Height="22" CornerRadius="11" Margin="0,0,10,0"
                                                     Background="{DynamicResource AccentFillColorDefaultBrush}" Opacity="0.85">
@@ -176,18 +185,39 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
-                </Border>
+                    </Border>
+                </StackPanel>
 
-                <!-- 选中项详情 -->
-                <Border Grid.Column="1" Classes="card" Padding="12,10" Margin="10,0,0,0" MinWidth="260" MaxWidth="360"
-                        VerticalAlignment="Top" IsVisible="{Binding HasSelectedEntry}">
+                <!-- 选中项详情（点击菜单行显示） -->
+                <Border Grid.Column="1" Classes="card" Padding="12,10" Margin="10,0,0,0" MinWidth="280" MaxWidth="380"
+                        VerticalAlignment="Top" IsVisible="{Binding HasSelectedEntry}"
+                        AutomationProperties.AutomationId="panel-detail" AutomationProperties.Name="条目详情">
                     <StackPanel Spacing="6">
                         <TextBlock Text="详情" Classes="sectionTitle"/>
-                        <TextBlock Text="{Binding SelectedEntry.Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                        <TextBlock FontSize="11.5" Opacity="0.65" TextWrapping="Wrap" Classes="mono"
+                        <TextBlock Text="{Binding SelectedEntry.Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap"/>
+                        <Grid ColumnDefinitions="Auto,*" >
+                            <StackPanel Grid.Column="0" Spacing="3" Margin="0,0,10,0">
+                                <TextBlock Text="场景" Classes="cardLabel"/>
+                                <TextBlock Text="类型" Classes="cardLabel"/>
+                                <TextBlock Text="来源" Classes="cardLabel"/>
+                                <TextBlock Text="状态" Classes="cardLabel"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="3">
+                                <TextBlock Text="{Binding SelectedEntry.SceneLabel}"/>
+                                <TextBlock Text="{Binding SelectedEntry.KindText}"/>
+                                <TextBlock Text="{Binding SelectedEntry.SourceName}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding SelectedEntry.StatusText}"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="注册表键" Classes="cardLabel"/>
+                        <TextBlock FontSize="11.5" Opacity="0.7" TextWrapping="Wrap" Classes="mono"
                                    Text="{Binding SelectedEntry.Model.RegistryPath}"/>
-                        <TextBlock FontSize="11.5" Opacity="0.65" TextWrapping="Wrap" Classes="mono"
+                        <TextBlock Text="命令 / 目标" Classes="cardLabel"/>
+                        <TextBlock FontSize="11.5" Opacity="0.7" TextWrapping="Wrap" Classes="mono"
                                    Text="{Binding SelectedEntry.Command}"/>
+                        <TextBlock Text="⚠ 该项指向的文件已不存在（卸载残留），可在列表页删除"
+                                   Foreground="#D13438" FontSize="12" TextWrapping="Wrap"
+                                   IsVisible="{Binding SelectedEntry.IsResidual}"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -196,38 +226,59 @@
             </TabItem>
 
             <TabItem Header="📦 来源视图" AutomationProperties.AutomationId="tab-source">
-                <!-- 来源视图：按软件聚合 -->
+                <!-- 来源视图：按软件聚合，点击展开全部注入点 -->
                 <ScrollViewer Margin="0,10,0,0">
-            <ItemsControl ItemsSource="{Binding SourceGroups}" Margin="2">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Classes="card sourceRow" Padding="14,10" Margin="0,0,0,8">
-                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                <TextBlock Grid.Column="0" Text="📦" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"
-                                                   AutomationProperties.Name="{Binding Name}"/>
-                                        <TextBlock Text="系统" FontSize="10.5" Opacity="0.55" VerticalAlignment="Center"
-                                                   IsVisible="{Binding IsSystem}"/>
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding Summary}" FontSize="12" Opacity="0.6"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <Button Content="全部禁用" Command="{Binding $parent[ItemsControl].DataContext.ToggleSourceCommand}"
-                                            CommandParameter="{Binding}" FontSize="12.5"
-                                            AutomationProperties.AutomationId="btn-source-disable"/>
-                                    <Button Content="全部启用" Classes="accent"
-                                            Command="{Binding $parent[ItemsControl].DataContext.ToggleSourceCommand}"
-                                            CommandParameter="{Binding}" FontSize="12.5"
-                                            AutomationProperties.AutomationId="btn-source-enable"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding SourceGroups}" Margin="2">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Expander Classes="card" Padding="6,4" Margin="0,0,0,8"
+                                          AutomationProperties.AutomationId="expander-source" AutomationProperties.Name="{Binding Name}">
+                                    <Expander.Header>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="4,4">
+                                            <TextBlock Grid.Column="0" Text="📦" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"/>
+                                                    <TextBlock Text="系统" FontSize="10.5" Opacity="0.55" VerticalAlignment="Center"
+                                                               IsVisible="{Binding IsSystem}"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Summary}" FontSize="12" Opacity="0.6"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                <Button Content="全部禁用" Command="{Binding $parent[ItemsControl].DataContext.ToggleSourceCommand}"
+                                                        CommandParameter="{Binding}" FontSize="12.5"
+                                                        AutomationProperties.AutomationId="btn-source-disable"/>
+                                                <Button Content="全部启用" Classes="accent"
+                                                        Command="{Binding $parent[ItemsControl].DataContext.ToggleSourceCommand}"
+                                                        CommandParameter="{Binding}" FontSize="12.5"
+                                                        AutomationProperties.AutomationId="btn-source-enable"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Expander.Header>
+                                    <!-- 展开内容：该来源的全部注入点 -->
+                                    <ItemsControl ItemsSource="{Binding Items}" Margin="8,2,8,6">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="2*,90,60,90,Auto" Margin="2,4">
+                                                    <TextBlock Grid.Column="0" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                               AutomationProperties.Name="{Binding Title}"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding SceneLabel}" VerticalAlignment="Center" Opacity="0.65" FontSize="12"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding KindText}" VerticalAlignment="Center" Opacity="0.65" FontSize="12"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding StatusText}" VerticalAlignment="Center" FontSize="12"
+                                                               Foreground="{Binding StatusText, Converter={x:Static vm:Converters.StatusBrush}}"/>
+                                                    <ToggleSwitch Grid.Column="4" IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                                                  Command="{Binding $parent[UserControl].DataContext.ToggleEntryCommand}"
+                                                                  CommandParameter="{Binding}"
+                                                                  AutomationProperties.AutomationId="switch-source-entry"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Expander>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
 
             </TabItem>
 
@@ -239,12 +290,12 @@
                           AutomationProperties.AutomationId="grid-entries" AutomationProperties.Name="菜单条目表">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="标记" Binding="{Binding BadgeText}" Width="90"/>
-                <DataGridTextColumn Header="名称" Binding="{Binding Title}" Width="230"/>
+                <DataGridTextColumn Header="名称" Binding="{Binding Title}" Width="2*"/>
                 <DataGridTextColumn Header="场景" Binding="{Binding SceneLabel}" Width="110"/>
                 <DataGridTextColumn Header="类型" Binding="{Binding KindText}" Width="60"/>
-                <DataGridTextColumn Header="来源" Binding="{Binding SourceName}" Width="150"/>
+                <DataGridTextColumn Header="来源" Binding="{Binding SourceName}" Width="1.2*"/>
                 <DataGridTextColumn Header="状态" Binding="{Binding StatusText}" Width="90"/>
-                <DataGridTextColumn Header="目标文件" Binding="{Binding TargetPath}" Width="260"/>
+                <DataGridTextColumn Header="目标文件" Binding="{Binding TargetPath}" Width="2*"/>
             </DataGrid.Columns>
         </DataGrid>
             </TabItem>

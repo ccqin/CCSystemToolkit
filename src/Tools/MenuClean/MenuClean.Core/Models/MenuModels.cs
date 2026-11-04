@@ -70,10 +70,7 @@ public sealed class MenuEntry
 
     public bool IsEnabled => Status is MenuEntryStatus.Enabled or MenuEntryStatus.ShiftOnly;
 
-    /// <summary>来源分组名。</summary>
+    /// <summary>来源分组名（公司名 → 目标文件名去扩展 → 未知）。</summary>
     public string SourceName => IsSystem ? "Microsoft / 系统"
-        : Publisher ?? (TargetPath is { } t ? TryPublisherFromPath(t) : null) ?? "未知来源";
-
-    private static string TryPublisherFromPath(string path) =>
-        Path.GetFileName(Path.GetDirectoryName(path)!) is { Length: > 0 } dir ? $"（{dir}）" : "未知来源";
+        : Publisher ?? (TargetPath is { } t ? Path.GetFileNameWithoutExtension(t) : null) ?? "未知来源";
 }

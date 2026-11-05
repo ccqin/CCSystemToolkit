@@ -61,18 +61,27 @@
         <!-- 统计卡 + 新增行 + 说明 -->
         <Border DockPanel.Dock="Top" Margin="0,0,0,12">
             <StackPanel Spacing="8">
-                <Grid ColumnDefinitions="*,*,*,*">
-                    <Border Classes="card" Padding="12,7" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="启动项(残留)" Classes="cardLabel"/><TextBlock Classes="cardValue" FontSize="17"><Run Text="{Binding TotalCount}"/> · <Run Text="{Binding ResidualCount}" Foreground="#D13438"/></TextBlock></StackPanel>
+                <Grid ColumnDefinitions="*,*,*,*,*,*,*">
+                    <Border Classes="card" Padding="10,7" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="启动项" Classes="cardLabel"/><TextBlock Text="{Binding TotalCount}" Classes="cardValue"/></StackPanel>
                     </Border>
-                    <Border Grid.Column="1" Classes="card" Padding="12,7" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="服务(自动)" Classes="cardLabel"/><TextBlock Classes="cardValue" FontSize="17"><Run Text="{Binding Services.Count}"/> · <Run Text="{Binding ServiceAutoCount}"/></TextBlock></StackPanel>
+                    <Border Grid.Column="1" Classes="card" Padding="10,7" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="已禁用启动" Classes="cardLabel"/><TextBlock Text="{Binding DisabledCount}" Classes="cardValue"/></StackPanel>
                     </Border>
-                    <Border Grid.Column="2" Classes="card" Padding="12,7" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="计划任务(登录触发)" Classes="cardLabel"/><TextBlock Classes="cardValue" FontSize="17"><Run Text="{Binding TaskCount}"/> · <Run Text="{Binding TaskLogonCount}"/></TextBlock></StackPanel>
+                    <Border Grid.Column="2" Classes="card" Padding="10,7" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="服务" Classes="cardLabel"/><TextBlock Text="{Binding Services.Count}" Classes="cardValue"/></StackPanel>
                     </Border>
-                    <Border Grid.Column="3" Classes="card" Padding="12,7">
-                        <StackPanel><TextBlock Text="⚠ 残留合计 · 已禁用启动项" Classes="cardLabel"/><TextBlock Classes="cardValue" FontSize="17" Foreground="#D13438"><Run Text="{Binding ResidualTotal}"/> · <Run Text="{Binding DisabledCount}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/></TextBlock></StackPanel>
+                    <Border Grid.Column="3" Classes="card" Padding="10,7" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="自动服务" Classes="cardLabel"/><TextBlock Text="{Binding ServiceAutoCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="4" Classes="card" Padding="10,7" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="计划任务" Classes="cardLabel"/><TextBlock Text="{Binding TaskCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="5" Classes="card" Padding="10,7" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="登录触发" Classes="cardLabel"/><TextBlock Text="{Binding TaskLogonCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="6" Classes="card" Padding="10,7">
+                        <StackPanel><TextBlock Text="⚠ 残留合计" Classes="cardLabel"/><TextBlock Text="{Binding ResidualTotal}" Classes="cardValue" Foreground="#D13438"/></StackPanel>
                     </Border>
                 </Grid>
 

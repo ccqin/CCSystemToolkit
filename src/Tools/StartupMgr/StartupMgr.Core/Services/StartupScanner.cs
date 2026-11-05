@@ -130,7 +130,15 @@ public sealed class StartupScanner
         }
         else
         {
-            first = cmd.Split(' ', 2)[0];
+            // 无引号但路径含空格（如 "E:\Program Files (x86)\DingDing\x.exe" /autorun）：
+            // 逐段累积直到文件存在，避免取到 "E:\Program" 误判残留
+            var parts = cmd.Split(' ');
+            first = parts[0];
+            for (int i = 1; i < parts.Length && i < 10; i++)
+            {
+                if (File.Exists(first)) break;
+                first += " " + parts[i];
+            }
         }
         return string.IsNullOrWhiteSpace(first) ? null : first;
     }

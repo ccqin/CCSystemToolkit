@@ -303,7 +303,14 @@ public sealed class ContextMenuScanner
         }
         else
         {
-            first = cmd.Split(' ', 2)[0];
+            // 无引号但路径含空格：逐段累积直到文件存在（避免误判残留）
+            var parts = cmd.Split(' ');
+            first = parts[0];
+            for (int i = 1; i < parts.Length && i < 10; i++)
+            {
+                if (File.Exists(first)) break;
+                first += " " + parts[i];
+            }
         }
         if (string.IsNullOrWhiteSpace(first)) return null;
 

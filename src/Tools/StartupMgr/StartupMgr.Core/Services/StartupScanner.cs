@@ -62,6 +62,9 @@ public sealed class StartupScanner
         ScanActiveSetup(entries);
         ScanDefaultUserRun(entries);
 
+        progress?.Invoke("扫描 UWP 应用 StartupTask…");
+        ScanUwpStartup(entries);
+
         return [.. entries.OrderBy(e => e.Status == StartupStatus.Disabled ? 1 : 0).ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)];
     }
 
@@ -159,6 +162,35 @@ public sealed class StartupScanner
             if (key.GetValue(name) is not string cmd) continue;
             AddCommandEntry(entries, name, cmd, StartupLocation.DefaultUserRun,
                 @"HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Run");
+        }
+    }
+
+    /// <summary>UWP/商店应用 StartupTask：AppModel\SystemAppData\{包名}\{任务Id} 的 State 值。
+    /// State：0/2=禁用（2=用户禁用）1=启用 3=策略禁用。无传统 exe，目标/来源留空。</summary>
+    private static void ScanUwpStartup(List<StartupEntry> entries)
+    {
+        using var root = Registry.CurrentUser.OpenSubKey(
+            @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\SystemAppData");
+        if (root is null) return;
+        foreach (var pkg in root.GetSubKeyNames())
+        {
+            using var pkgKey = root.OpenSubKey(pkg);
+            if (pkgKey is null) continue;
+            foreach (var taskId in pkgKey.GetSubKeyNames())
+            {
+                using var t = pkgKey.OpenSubKey(taskId);
+                if (t?.GetValue("State") is not int state) continue;   // 只有声明了 StartupTask 的应用才有该键
+                bool enabled = state == 1;
+                entries.Add(new StartupEntry
+                {
+                    Name = $"{pkg}!{taskId}",
+                    Command = $"UWP StartupTask（State={state}）",
+                    Location = StartupLocation.UwpStartup,
+                    Status = enabled ? StartupStatus.Enabled : StartupStatus.Disabled,
+                    SourcePath = $@"HKCU\...\AppModel\SystemAppData\{pkg}\{taskId}",
+                    UwpStateKey = $@"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\SystemAppData\{pkg}\{taskId}",
+                });
+            }
         }
     }
 

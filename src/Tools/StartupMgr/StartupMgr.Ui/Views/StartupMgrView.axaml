@@ -62,60 +62,20 @@
         <Border DockPanel.Dock="Top" Margin="0,0,0,12">
             <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="*,*,*,*">
-                    <Border Classes="card" Padding="12,8" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="启动项" Classes="cardLabel"/><TextBlock Text="{Binding TotalCount}" Classes="cardValue"/></StackPanel>
+                    <Border Classes="card" Padding="12,7" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="启动项(残留)" Classes="cardLabel"/><TextBlock Classes="cardValue" FontSize="17"><Run Text="{Binding TotalCount}"/> · <Run Text="{Binding ResidualCount}" Foreground="#D13438"/></TextBlock></StackPanel>
                     </Border>
-                    <Border Grid.Column="1" Classes="card" Padding="12,8" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="注册表项" Classes="cardLabel"/><TextBlock Text="{Binding RegistryCount}" Classes="cardValue"/></StackPanel>
+                    <Border Grid.Column="1" Classes="card" Padding="12,7" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="服务(自动)" Classes="cardLabel"/><TextBlock Classes="cardValue" FontSize="17"><Run Text="{Binding Services.Count}"/> · <Run Text="{Binding ServiceAutoCount}"/></TextBlock></StackPanel>
                     </Border>
-                    <Border Grid.Column="2" Classes="card" Padding="12,8" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="⚠ 残留" Classes="cardLabel"/><TextBlock Text="{Binding ResidualCount}" Classes="cardValue" Foreground="#D13438"/></StackPanel>
+                    <Border Grid.Column="2" Classes="card" Padding="12,7" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="计划任务(登录触发)" Classes="cardLabel"/><TextBlock Classes="cardValue" FontSize="17"><Run Text="{Binding TaskCount}"/> · <Run Text="{Binding TaskLogonCount}"/></TextBlock></StackPanel>
                     </Border>
-                    <Border Grid.Column="3" Classes="card" Padding="12,8">
-                        <StackPanel><TextBlock Text="已禁用" Classes="cardLabel"/><TextBlock Text="{Binding DisabledCount}" Classes="cardValue"/></StackPanel>
-                    </Border>
-                </Grid>
-                <Grid ColumnDefinitions="*,*,*,*">
-                    <Border Classes="card" Padding="12,8" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="服务总数" Classes="cardLabel"/><TextBlock Text="{Binding Services.Count}" Classes="cardValue"/></StackPanel>
-                    </Border>
-                    <Border Grid.Column="1" Classes="card" Padding="12,8" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="自动启动服务" Classes="cardLabel"/><TextBlock Text="{Binding ServiceAutoCount}" Classes="cardValue"/></StackPanel>
-                    </Border>
-                    <Border Grid.Column="2" Classes="card" Padding="12,8" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="自动·第三方" Classes="cardLabel"/><TextBlock Text="{Binding ServiceThirdPartyCount}" Classes="cardValue"/></StackPanel>
-                    </Border>
-                    <Border Grid.Column="3" Classes="card" Padding="12,8">
-                        <StackPanel><TextBlock Text="服务⚠ 残留" Classes="cardLabel"/><TextBlock Text="{Binding ServiceResidualCount}" Classes="cardValue" Foreground="#D13438"/></StackPanel>
-                    </Border>
-                </Grid>
-                <Grid ColumnDefinitions="*,*,*,*">
-                    <Border Classes="card" Padding="12,8" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="计划任务" Classes="cardLabel"/><TextBlock Text="{Binding TaskCount}" Classes="cardValue"/></StackPanel>
-                    </Border>
-                    <Border Grid.Column="1" Classes="card" Padding="12,8" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="登录触发" Classes="cardLabel"/><TextBlock Text="{Binding TaskLogonCount}" Classes="cardValue"/></StackPanel>
-                    </Border>
-                    <Border Grid.Column="2" Classes="card" Padding="12,8" Margin="0,0,8,0">
-                        <StackPanel><TextBlock Text="第三方任务" Classes="cardLabel"/><TextBlock Text="{Binding TaskThirdPartyCount}" Classes="cardValue"/></StackPanel>
-                    </Border>
-                    <Border Grid.Column="3" Classes="card" Padding="12,8">
-                        <StackPanel><TextBlock Text="说明" Classes="cardLabel"/><TextBlock Text="登录触发=自启动" Classes="cardValue" FontSize="13"/></StackPanel>
+                    <Border Grid.Column="3" Classes="card" Padding="12,7">
+                        <StackPanel><TextBlock Text="⚠ 残留合计 · 已禁用启动项" Classes="cardLabel"/><TextBlock Classes="cardValue" FontSize="17" Foreground="#D13438"><Run Text="{Binding ResidualTotal}"/> · <Run Text="{Binding DisabledCount}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/></TextBlock></StackPanel>
                     </Border>
                 </Grid>
 
-                <!-- 新增启动项 -->
-                <Border Classes="card" Padding="12,10">
-                    <Grid ColumnDefinitions="Auto,180,*,Auto,Auto">
-                        <TextBlock Grid.Column="0" Text="➕ 新增(HKCU·Run):" VerticalAlignment="Center" FontSize="12.5" Opacity="0.7" Margin="0,0,8,0"/>
-                        <TextBox Grid.Column="1" Text="{Binding NewName}" Watermark="名称"
-                                 AutomationProperties.AutomationId="input-new-name" AutomationProperties.Name="新名称"/>
-                        <TextBox Grid.Column="2" Text="{Binding NewCommand}" Watermark="命令行，如 &quot;C:\app\app.exe&quot; /min" Margin="8,0,0,0" Classes="mono"
-                                 AutomationProperties.AutomationId="input-new-command" AutomationProperties.Name="新命令"/>
-                        <Button Grid.Column="3" Content="添加" Classes="accent" Command="{Binding AddEntryCommand}" Margin="8,0,0,0"
-                                AutomationProperties.AutomationId="btn-add" AutomationProperties.Name="添加启动项"/>
-                    </Grid>
-                </Border>
 
                 <TextBlock Text="ℹ 禁用走系统 StartupApproved 机制（与任务管理器/设置的禁用互通，完全可逆，注销或重启后生效）。范围：注册表 Run/RunOnce（HKCU/HKLM/32位视图）+ 启动文件夹（用户/全局）；计划任务与服务自启不在本工具范围。"
                            Opacity="0.6" FontSize="12" TextWrapping="Wrap"/>

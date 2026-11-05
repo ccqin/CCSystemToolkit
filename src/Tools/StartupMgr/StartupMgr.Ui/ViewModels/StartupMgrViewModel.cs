@@ -143,6 +143,9 @@ public partial class StartupMgrViewModel : ObservableObject
     public int TaskLogonCount => Tasks.Count(t => t.Model.IsLogonTrigger);
     public int TaskThirdPartyCount => Tasks.Count(t => !t.Model.IsSystem);
 
+    /// <summary>三页残留合计（启动项 + 服务 + 计划任务）。</summary>
+    public int ResidualTotal => ResidualCount + ServiceResidualCount + Tasks.Count(t => t.IsResidual);
+
     /// <summary>计划任务过滤（触发器筛选 + 搜索）。</summary>
     public IEnumerable<TaskItemViewModel> FilteredTasks
     {
@@ -226,6 +229,7 @@ public partial class StartupMgrViewModel : ObservableObject
             OnPropertyChanged(nameof(TaskCount));
             OnPropertyChanged(nameof(TaskLogonCount));
             OnPropertyChanged(nameof(TaskThirdPartyCount));
+            OnPropertyChanged(nameof(ResidualTotal));
 
             Services.Clear();
             foreach (var sv in services) Services.Add(new ServiceItemViewModel { Model = sv });

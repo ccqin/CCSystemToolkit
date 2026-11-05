@@ -29,6 +29,25 @@ public sealed class StartupCleaner
 
     public StartupResult Toggle(StartupEntry entry, bool disable)
     {
+        if (entry.Location == StartupLocation.UwpStartup)
+        {
+            // UWP：写 AppModel SystemAppData 的 State（1=启用 2=用户禁用，与设置→应用→启动同一存储）
+            if (entry.UwpStateKey is not { } keyPath) return new StartupResult(false, "✘ 缺少 UWP 状态键路径。");
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(keyPath, writable: true);
+                if (key is null) return new StartupResult(false, "✘ 状态键不可写。");
+                key.SetValue("State", disable ? 2 : 1, RegistryValueKind.DWord);
+                entry.Status = disable ? StartupStatus.Disabled : StartupStatus.Enabled;
+                return new StartupResult(true,
+                    $"✔ 已{(disable ? "禁用" : "启用")} UWP 启动任务「{entry.Name}」（与系统设置的启动开关同一存储）。");
+            }
+            catch (Exception ex)
+            {
+                return new StartupResult(false, $"✘ 操作失败：{ex.Message}");
+            }
+        }
+
         if (!entry.SupportsToggle)
         {
             return new StartupResult(false,

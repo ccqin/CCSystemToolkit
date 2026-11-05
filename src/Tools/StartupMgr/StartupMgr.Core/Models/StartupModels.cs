@@ -15,6 +15,7 @@ public enum StartupLocation
     Winlogon,       // HKLM\...\Winlogon 的 Userinit/Shell 追加项（监控位，恶意软件常用）
     ActiveSetup,    // HKLM\...\Active Setup\Installed Components 的 StubPath
     DefaultUserRun, // HKU\.DEFAULT 的 Run（登录屏幕）
+    UwpStartup,     // UWP/商店应用 StartupTask（AppModel\SystemAppData 的 State）
 }
 
 public enum StartupStatus
@@ -52,8 +53,11 @@ public sealed class StartupEntry
     public bool SupportsToggle => Location is not (StartupLocation.Winlogon or StartupLocation.ActiveSetup
         or StartupLocation.HkcuPolicyRun or StartupLocation.HklmPolicyRun or StartupLocation.DefaultUserRun);
 
-    /// <summary>Winlogon/ActiveSetup 是系统关键监控位，不提供删除（改坏会进不了桌面）。</summary>
+    /// <summary>Winlogon/ActiveSetup 是系统关键监控位，不提供删除（改坏会进不了桌面）；UWP 项不可删只可开关。</summary>
     public bool SupportsDelete => SupportsToggle || Location is StartupLocation.HkcuPolicyRun or StartupLocation.HklmPolicyRun or StartupLocation.DefaultUserRun;
+
+    /// <summary>UWP StartupTask 的状态键（AppModel\SystemAppData\{包}\{任务Id}\State）。</summary>
+    public string? UwpStateKey { get; init; }
 
     public string LocationText => Location switch
     {
@@ -68,6 +72,7 @@ public sealed class StartupEntry
         StartupLocation.HklmPolicyRun => "策略Run·机器",
         StartupLocation.Winlogon => "Winlogon",
         StartupLocation.ActiveSetup => "ActiveSetup",
+        StartupLocation.UwpStartup => "UWP 应用",
         _ => ".DEFAULT·Run",
     };
 

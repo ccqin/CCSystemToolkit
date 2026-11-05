@@ -10,6 +10,7 @@
 | 🔐 **权限医生** | 诊断/修复文件夹 ACL 权限（安装程序“错误 5：拒绝访问”等问题）：**诊断报告** = 写入实测（真实创建/删除子目录）+ 当前用户有效权限 + 所有者/继承状态 + 问题清单（孤儿 SID、断继承、缺权限）；**权限明细表** 列出全部 ACL 条目（身份/权限/应用于/继承来源，标注孤儿 SID 与匹配当前用户的条目）；**一键修复**（授予修改权限 / 恢复继承 / 取得所有权）或复制等效 `icacls`/`takeown` 命令到管理员终端。 |
 | 🧹 **清理右键菜单** | 按「右键场景」管理经典右键菜单（Win11 在「显示更多选项」中），三个 Tab 页：**场景视图**（左选场景：任意文件/文件夹/空白处/驱动器/后缀动态发现，右侧模拟真实菜单逐项开关，显示本场景条目数）；**来源视图**（按软件聚合成可展开组，一键禁用/启用全部注入点）；**全量列表**（搜索过滤、列宽可调）。扫描覆盖 `*`/`Directory`/`AllFilesystemObjects` 等通用根 + `SystemFileAssociations` + `.后缀→ProgID` 间接路径（exefile 等）。自动检测**软件卸载残留**（命令指向不存在的文件，一键清理）、识别 Microsoft/系统项并保护。禁用走 HKCU（完全可逆）、删除前自动 .reg 备份可还原；共享详情面板实时读取注册表值与文件版本信息、生成等效 reg 命令（可复制）；搜索三视图联动；扫描等待遮罩；shellex 禁用后可一键重启资源管理器。 |
 | 🧩 **COM 扩展管理** | 管理 Shell COM 扩展：右键菜单的**动态项**（如“发送到手机”，注册表搜不到文字）、**图标叠加**（系统上限 15 个，超出的排队浪费）、缩略图、预览窗格、属性页。描述三级回退（**Approved 官方清单 → CLSID 组件名 → 键名**）；**疑似菜单文字分析**：以纯数据方式映射 DLL（不执行代码）遍历字符串资源，启发式筛出该扩展实际显示的菜单文字（如夸克的“发送到手机/PDF转Word…”），点击行展开二级详情查看；DLL 残留检测、按 CLSID 聚合注册点、类型筛选与搜索；黑名单禁用可逆 + 一键重启资源管理器；扫描等待遮罩。 |
+| 🚀 **开机启动项** | 管理开机启动项：注册表 **Run/RunOnce**（HKCU / HKLM / 32 位视图）+ **启动文件夹**（用户/全局）。**禁用走系统 StartupApproved 机制**（与任务管理器/设置的禁用状态互通，完全可逆）；卸载残留检测（目标文件不存在标 ⚠）；删除前自动备份（注册表值/启动文件，可一键还原）；支持**新增** HKCU·Run 启动项；搜索过滤 + 扫描等待遮罩。计划任务与服务自启不在范围。 |
 | 📋 **操作日志** | 以工具卡片形式进入的完整日志页：按级别（信息/成功/错误）与来源（各工具）筛选，实时统计“共 N 条 · ✔ · ✘”，一键清空；与状态栏“日志”Flyout 共用同一份数据。 |
 | 🧩 更多工具开发中 | 新工具以 ToolModule 模块接入（见下文）。 |
 | 🎨 **主页与主题** | 卡片背景自定义：⚙ 菜单（12 色色板/取色器/本地图片），默认绿底白字，配置持久化；状态栏**明暗主题循环切换**（跟随系统/浅色/深色，DynamicResource 即时刷新）；全局控件统一圆角、卡片阴影与悬停上浮动效。 |
@@ -86,6 +87,13 @@ SystemToolkit.sln
 │     │                             #   SuspectedTextScanner（DLL 字符串资源启发式分析，纯数据映射）、
 │     │                             #   ShellExtCleaner（Blocked 黑名单禁用）
 │     └─ ShellExt.Ui/              # 列表 UI + 行详情二级展示 + 等待遮罩
+│  └─ Tools/StartupMgr/            # 开机启动项管理
+│     ├─ StartupMgr.Core/          # 启动项核心
+│     │  ├─ Models/StartupModels.cs    # 启动项模型（位置/状态/残留）
+│     │  └─ Services/                  # StartupScanner（Run/RunOnce/启动文件夹 +
+│     │                                 #   StartupApproved 禁用状态读取）、
+│     │                                 # StartupCleaner（禁用/删除备份还原/新增）
+│     └─ StartupMgr.Ui/            # 列表 UI（开关+删除+新增+备份）+ 等待遮罩
 └─ tools/RouteDump/                # 命令行快照/自测工具（只依赖 Core）
 ```
 
@@ -115,6 +123,7 @@ SystemToolkit.sln
   | 权限医生 | `input-path` / `btn-browse` / `btn-diagnose` / `grid-acl` / `btn-fix-grant` / `btn-fix-reset` / `btn-fix-owner` / `tb-commands` / `btn-copy-commands` / `tb-status` | 对应中文功能名 |
   | 清理右键菜单 | `tab-scene` / `tab-source` / `tab-list` / `btn-scan` / `tb-search` / `list-scenes` / `switch-entry` / `grid-entries` / `expander-source` / `btn-clean-residual` / `btn-backups` / `btn-restart-explorer` / `panel-detail` / `btn-close-detail` / `tb-detail-commands` / `panel-busy` / `tb-status` | 对应中文功能名 |
   | COM 扩展管理 | `combo-kind` / `tb-search` / `btn-scan` / `grid-exts` / `switch-ext` / `row-details`（行详情）/ `btn-restart-explorer` / `panel-busy` / `tb-status` | 对应中文功能名 |
+  | 开机启动项 | `btn-scan` / `tb-search` / `grid-startups` / `switch-item` / `btn-delete` / `input-new-name` / `input-new-command` / `btn-add` / `btn-backups` / `panel-busy` / `tb-status` | 对应中文功能名 |
   | 状态栏（主题） | `btn-theme` | 主题切换 |
 
   `GearIcon` 自定义控件示例了自定义 `AutomationPeer`（`GetNameCore() => "齿轮"`）。新增工具时建议同样为卡片内可交互控件设置 AutomationId。
@@ -137,6 +146,7 @@ SystemToolkit.sln
 - 权限医生实测：诊断 `E:\Programs\Trae CN`（安装“错误 5”现场）命中孤儿 SID/缺写权限/写入被拒全部问题；修复按钮普通权限下正确引导提权；实测授予修改权限后安装成功。
 - 清理右键菜单实测：本机扫描 925 项（第三方 202 / 残留 59 / 已禁用 65），ProgID 间接路径补全后覆盖右键 .exe 的全部注入项；残留一键清理、禁用/启用、.reg 备份还原、搜索三视图联动、共享详情（注册表值/文件信息/等效命令）均验证。
 - COM 扩展管理实测：本机 106 个扩展（图标叠加 35，超系统 15 上限）；搜“手机”经疑似菜单文字命中夸克扩展并展开显示其全部菜单文字（发送到手机/PDF转Word 等）；黑名单禁用写入注册表实测生效，重启资源管理器后菜单项消失。
+- 开机启动项实测：本机扫描 18 项（注册表 16 / 残留 4 / 已禁用 5 —— 任务管理器禁用过的项状态正确互通）；desktop.ini 自动排除。
 - 操作日志卡片实测：点击进入 → 统计/级别筛选/来源筛选/清空均正常，进入工具本身产生日志并实时归集。
 - 卡片背景实测：⚙ Flyout 色板即时变色、取色器自定义色、本地图片背景均正常；重启后配置完整恢复；主题循环切换（跟随系统/浅色/深色）即时生效。
 - RouteDump 输出与本机 `route print` 一致（结构体 ABI 自检通过）。

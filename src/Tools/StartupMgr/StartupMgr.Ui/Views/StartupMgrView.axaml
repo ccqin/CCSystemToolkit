@@ -1,0 +1,145 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="StartupMgr.Ui.Views.StartupMgrView">
+
+    <UserControl.Styles>
+        <Style Selector="Border.busyOverlay">
+            <Setter Property="Background" Value="#66000000"/>
+            <Setter Property="ZIndex" Value="100"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Panel>
+    <DockPanel Margin="24,18">
+        <!-- 顶部工具栏 -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
+                <TextBlock Grid.Column="0" Text="🚀 开机启动项" FontSize="16" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="0,0,14,0"/>
+                <TextBox Grid.Column="1" Text="{Binding SearchText}" Watermark="🔍 搜索名称 / 命令 / 来源 / 位置"
+                         HorizontalAlignment="Right" MinWidth="240"
+                         AutomationProperties.AutomationId="tb-search" AutomationProperties.Name="搜索"/>
+                <Button Grid.Column="2" Content="↻ 扫描" Classes="accent" Command="{Binding ScanCommand}" Margin="8,0,0,0"
+                        IsEnabled="{Binding !IsBusy}"
+                        AutomationProperties.AutomationId="btn-scan" AutomationProperties.Name="扫描"/>
+                <Button Grid.Column="3" Content="📦 备份" Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="btn-backups" AutomationProperties.Name="备份管理">
+                    <Button.Flyout>
+                        <Flyout Placement="Bottom">
+                            <StackPanel Width="460" Spacing="8" Margin="2,4">
+                                <TextBlock Text="备份与还原" FontWeight="SemiBold"/>
+                                <TextBlock Text="删除启动项前自动备份（注册表值/启动文件），选中一条还原：" Opacity="0.6" FontSize="12"/>
+                                <ListBox ItemsSource="{Binding Backups}" MinHeight="120" MaxHeight="280"
+                                         AutomationProperties.AutomationId="list-backups">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding ValueName}" FontSize="12.5" AutomationProperties.Name="{Binding ValueName}"/>
+                                                    <TextBlock FontSize="11" Opacity="0.55" Text="{Binding Time}"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Content="还原" FontSize="12" Padding="10,3"
+                                                        Command="{Binding $parent[ListBox].DataContext.RestoreBackupCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        AutomationProperties.AutomationId="btn-restore"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <Button Content="打开备份目录…" Command="{Binding OpenBackupsCommand}" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <Button Grid.Column="4" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
+                        ToolTip.Tip="删除 HKLM 下的项与全局启动文件夹需要管理员。"
+                        AutomationProperties.AutomationId="btn-elevate"/>
+            </Grid>
+        </Border>
+
+        <!-- 统计卡 + 新增行 + 说明 -->
+        <Border DockPanel.Dock="Top" Margin="0,0,0,12">
+            <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="*,*,*,*">
+                    <Border Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="启动项" Classes="cardLabel"/><TextBlock Text="{Binding TotalCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="注册表项" Classes="cardLabel"/><TextBlock Text="{Binding RegistryCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="⚠ 残留" Classes="cardLabel"/><TextBlock Text="{Binding ResidualCount}" Classes="cardValue" Foreground="#D13438"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Classes="card" Padding="12,8">
+                        <StackPanel><TextBlock Text="已禁用" Classes="cardLabel"/><TextBlock Text="{Binding DisabledCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- 新增启动项 -->
+                <Border Classes="card" Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,180,*,Auto,Auto">
+                        <TextBlock Grid.Column="0" Text="➕ 新增(HKCU·Run):" VerticalAlignment="Center" FontSize="12.5" Opacity="0.7" Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="1" Text="{Binding NewName}" Watermark="名称"
+                                 AutomationProperties.AutomationId="input-new-name" AutomationProperties.Name="新名称"/>
+                        <TextBox Grid.Column="2" Text="{Binding NewCommand}" Watermark="命令行，如 &quot;C:\app\app.exe&quot; /min" Margin="8,0,0,0" Classes="mono"
+                                 AutomationProperties.AutomationId="input-new-command" AutomationProperties.Name="新命令"/>
+                        <Button Grid.Column="3" Content="添加" Classes="accent" Command="{Binding AddEntryCommand}" Margin="8,0,0,0"
+                                AutomationProperties.AutomationId="btn-add" AutomationProperties.Name="添加启动项"/>
+                    </Grid>
+                </Border>
+
+                <TextBlock Text="ℹ 禁用走系统 StartupApproved 机制（与任务管理器/设置的禁用互通，完全可逆，注销或重启后生效）。范围：注册表 Run/RunOnce（HKCU/HKLM/32位视图）+ 启动文件夹（用户/全局）；计划任务与服务自启不在本工具范围。"
+                           Opacity="0.6" FontSize="12" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 状态行 -->
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" Opacity="0.7" Margin="2,10,0,0"
+                   TextWrapping="Wrap" AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
+
+        <!-- 列表 -->
+        <DataGrid ItemsSource="{Binding FilteredEntries}" AutoGenerateColumns="False" IsReadOnly="True"
+                  CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                  AutomationProperties.AutomationId="grid-startups" AutomationProperties.Name="启动项表">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="标记" Binding="{Binding BadgeText}" Width="90"/>
+                <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="1.6*"/>
+                <DataGridTextColumn Header="位置" Binding="{Binding LocationText}" Width="100"/>
+                <DataGridTextColumn Header="来源" Binding="{Binding SourceName}" Width="1.2*"/>
+                <DataGridTextColumn Header="状态" Binding="{Binding StatusText}" Width="80"/>
+                <DataGridTextColumn Header="命令" Binding="{Binding Command}" Width="2.4*"/>
+                <DataGridTemplateColumn Header="启用" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ToggleSwitch IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                          Command="{Binding $parent[UserControl].DataContext.ToggleEntryCommand}"
+                                          CommandParameter="{Binding}"
+                                          AutomationProperties.AutomationId="switch-item" AutomationProperties.Name="{Binding Name}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="删除" Width="76">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="✕ 删除" FontSize="12" Padding="8,3"
+                                    Command="{Binding $parent[UserControl].DataContext.DeleteEntryCommand}"
+                                    CommandParameter="{Binding}"
+                                    ToolTip.Tip="删除前自动备份，可从「备份」还原。"
+                                    AutomationProperties.AutomationId="btn-delete" AutomationProperties.Name="删除启动项"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+
+    <!-- 扫描中遮罩 -->
+    <Border Classes="busyOverlay" IsVisible="{Binding IsBusy}"
+            AutomationProperties.AutomationId="panel-busy" AutomationProperties.Name="扫描中">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
+            <ProgressBar IsIndeterminate="True" Width="240"/>
+            <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="13"/>
+        </StackPanel>
+    </Border>
+    </Panel>
+</UserControl>

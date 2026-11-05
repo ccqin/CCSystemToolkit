@@ -7,4 +7,9 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Windows 任务计划程序 COM API 封装（枚举/触发器/启停/删除；与 taskschd.msc 同通道） -->
+    <PackageReference Include="TaskScheduler" Version="2.12.2" />
+  </ItemGroup>
+
 </Project>

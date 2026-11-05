@@ -61,13 +61,35 @@ public partial class ServiceItemViewModel : ObservableObject
     public void RefreshFromModel() => StartTypeText = Model.StartTypeText;
 }
 
-/// <summary>开机启动项管理主 VM（Tab1 启动项 / Tab2 服务）。</summary>
+/// <summary>计划任务行 VM。</summary>
+public partial class TaskItemViewModel : ObservableObject
+{
+    public required TaskEntry Model { get; init; }
+    public string Path => Model.Path;
+    public string Name => Model.Name;
+    public string TriggersText => Model.TriggersText;
+    public string? Command => Model.Command;
+    public string? TargetPath => Model.TargetPath;
+    public string LastRunText => Model.LastRunText;
+    public string NextRunText => Model.NextRunText;
+    public string SourceName => Model.SourceName;
+    public string BadgeText => Model.BadgeText;
+    public bool IsResidual => Model.IsResidual;
+
+    [ObservableProperty]
+    private string _stateText = "";
+
+    public void RefreshFromModel() => StateText = Model.StateText;
+}
+
+/// <summary>开机启动项管理主 VM（Tab1 启动项 / Tab2 服务 / Tab3 计划任务）。</summary>
 public partial class StartupMgrViewModel : ObservableObject
 {
     private readonly IToolHost _host;
     private readonly StartupScanner _scanner = new();
     private readonly StartupCleaner _cleaner = new();
     private readonly ServiceScanner _serviceScanner = new();
+    private readonly TaskScanner _taskScanner = new();
 
     public StartupMgrViewModel(IToolHost host) => _host = host;
 
@@ -75,6 +97,14 @@ public partial class StartupMgrViewModel : ObservableObject
     public ObservableCollection<StartupBackupRecord> Backups { get; } = [];
 
     public ObservableCollection<ServiceItemViewModel> Services { get; } = [];
+
+    public ObservableCollection<TaskItemViewModel> Tasks { get; } = [];
+
+    /// <summary>计划任务筛选候选。</summary>
+    public static IReadOnlyList<string> TaskFilters { get; } = ["登录触发", "仅第三方", "全部"];
+
+    [ObservableProperty]
+    private string _taskFilter = "登录触发";
 
     /// <summary>服务筛选候选。</summary>
     public static IReadOnlyList<string> ServiceFilters { get; } = ["自动启动", "全部含手动", "仅第三方"];
@@ -108,6 +138,32 @@ public partial class StartupMgrViewModel : ObservableObject
     public int ServiceAutoCount => Services.Count(s => s.Model.StartType == ServiceStartType.Automatic);
     public int ServiceResidualCount => Services.Count(s => s.IsResidual);
     public int ServiceThirdPartyCount => Services.Count(s => !s.IsSystem && s.Model.StartType == ServiceStartType.Automatic);
+
+    public int TaskCount => Tasks.Count;
+    public int TaskLogonCount => Tasks.Count(t => t.Model.IsLogonTrigger);
+    public int TaskThirdPartyCount => Tasks.Count(t => !t.Model.IsSystem);
+
+    /// <summary>计划任务过滤（触发器筛选 + 搜索）。</summary>
+    public IEnumerable<TaskItemViewModel> FilteredTasks
+    {
+        get
+        {
+            IEnumerable<TaskItemViewModel> q = Tasks;
+            q = TaskFilter switch
+            {
+                "登录触发" => q.Where(t => t.Model.IsLogonTrigger),
+                "仅第三方" => q.Where(t => !t.Model.IsSystem),
+                _ => q,
+            };
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                q = q.Where(t => t.Path.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                    || t.SourceName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                    || (t.Command?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+            return q;
+        }
+    }
 
     /// <summary>服务视图过滤（按筛选 + 搜索）。</summary>
     public IEnumerable<ServiceItemViewModel> FilteredServices
@@ -161,6 +217,15 @@ public partial class StartupMgrViewModel : ObservableObject
             IProgress<string> progress = new Progress<string>(msg => StatusText = msg);
             var models = await Task.Run(() => _scanner.ScanAll(msg => progress.Report(msg)));
             var services = await Task.Run(() => _serviceScanner.ScanAll(msg => progress.Report(msg)));
+            var tasks = await Task.Run(() => _taskScanner.ScanAll(msg => progress.Report(msg)));
+
+            Tasks.Clear();
+            foreach (var t in tasks) Tasks.Add(new TaskItemViewModel { Model = t });
+            foreach (var t in Tasks) t.RefreshFromModel();
+            OnPropertyChanged(nameof(FilteredTasks));
+            OnPropertyChanged(nameof(TaskCount));
+            OnPropertyChanged(nameof(TaskLogonCount));
+            OnPropertyChanged(nameof(TaskThirdPartyCount));
 
             Services.Clear();
             foreach (var sv in services) Services.Add(new ServiceItemViewModel { Model = sv });
@@ -179,7 +244,7 @@ public partial class StartupMgrViewModel : ObservableObject
             OnPropertyChanged(nameof(ResidualCount));
             OnPropertyChanged(nameof(DisabledCount));
             OnPropertyChanged(nameof(RegistryCount));
-            AddLog($"✔ 扫描完成：启动项 {TotalCount}（残留 {ResidualCount} · 已禁用 {DisabledCount}）· 服务 {Services.Count}（自动 {ServiceAutoCount} · 残留 {ServiceResidualCount}）。");
+            AddLog($"✔ 扫描完成：启动项 {TotalCount}（残留 {ResidualCount}）· 服务 {Services.Count}（自动 {ServiceAutoCount}）· 计划任务 {TaskCount}（登录触发 {TaskLogonCount} · 第三方 {TaskThirdPartyCount}）。");
         }
         catch (Exception ex)
         {
@@ -195,6 +260,8 @@ public partial class StartupMgrViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(FilteredEntries));
         OnPropertyChanged(nameof(FilteredServices));
+        OnPropertyChanged(nameof(FilteredTasks));
+        OnPropertyChanged(nameof(FilteredTasks));
         if (!string.IsNullOrWhiteSpace(value))
         {
             StatusText = $"🔍 已过滤：{FilteredEntries.Count()} / {TotalCount} 项匹配";
@@ -258,6 +325,34 @@ public partial class StartupMgrViewModel : ObservableObject
     private void OpenBackups() => _cleaner.OpenBackupFolder();
 
     partial void OnServiceFilterChanged(string value) => OnPropertyChanged(nameof(FilteredServices));
+
+    partial void OnTaskFilterChanged(string value) => OnPropertyChanged(nameof(FilteredTasks));
+
+    [RelayCommand]
+    private void ToggleTask(TaskItemViewModel item)
+    {
+        var result = _taskScanner.Change(item.Model.IsEnabled ? StartupMgrTaskAction.Disable : StartupMgrTaskAction.Enable, item.Model.Path);
+        if (result.Success)
+        {
+            item.Model.State = item.Model.IsEnabled ? 3 : 0;
+            item.RefreshFromModel();
+        }
+        AddLog(result.Message);
+        OnPropertyChanged(nameof(FilteredTasks));
+    }
+
+    [RelayCommand]
+    private void DeleteTask(TaskItemViewModel item)
+    {
+        var result = _taskScanner.Change(StartupMgrTaskAction.Delete, item.Model.Path);
+        if (result.Success)
+        {
+            Tasks.Remove(item);
+            OnPropertyChanged(nameof(TaskCount));
+            OnPropertyChanged(nameof(FilteredTasks));
+        }
+        AddLog(result.Message);
+    }
 
     [RelayCommand]
     private void SetServiceManual(ServiceItemViewModel item) => ApplyServiceStart(item, ServiceStartType.Manual);

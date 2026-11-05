@@ -89,6 +89,20 @@
                         <StackPanel><TextBlock Text="服务⚠ 残留" Classes="cardLabel"/><TextBlock Text="{Binding ServiceResidualCount}" Classes="cardValue" Foreground="#D13438"/></StackPanel>
                     </Border>
                 </Grid>
+                <Grid ColumnDefinitions="*,*,*,*">
+                    <Border Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="计划任务" Classes="cardLabel"/><TextBlock Text="{Binding TaskCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="登录触发" Classes="cardLabel"/><TextBlock Text="{Binding TaskLogonCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="第三方任务" Classes="cardLabel"/><TextBlock Text="{Binding TaskThirdPartyCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Classes="card" Padding="12,8">
+                        <StackPanel><TextBlock Text="说明" Classes="cardLabel"/><TextBlock Text="登录触发=自启动" Classes="cardValue" FontSize="13"/></StackPanel>
+                    </Border>
+                </Grid>
 
                 <!-- 新增启动项 -->
                 <Border Classes="card" Padding="12,10">
@@ -189,6 +203,48 @@
                                                     CommandParameter="{Binding}"
                                                     ToolTip.Tip="禁用后服务不再自启；系统服务慎用。"
                                                     AutomationProperties.AutomationId="btn-svc-disable"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="📋 计划任务" AutomationProperties.AutomationId="tab-tasks">
+                <DockPanel Margin="0,10,0,0">
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <TextBlock Text="触发器类型：登录(=自启动)/开机/定时/事件/空闲…；系统任务修改需要管理员，第三方任务（Google/网盘更新器等）可安全处理。" Opacity="0.6" FontSize="12" TextWrapping="Wrap"/>
+                        <ComboBox Width="140" HorizontalAlignment="Right" ItemsSource="{x:Static vm:StartupMgrViewModel.TaskFilters}"
+                                  SelectedItem="{Binding TaskFilter}"
+                                  AutomationProperties.AutomationId="combo-task-filter" AutomationProperties.Name="任务筛选"/>
+                    </DockPanel>
+                    <DataGrid ItemsSource="{Binding FilteredTasks}" AutoGenerateColumns="False" IsReadOnly="True"
+                              CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                              AutomationProperties.AutomationId="grid-tasks" AutomationProperties.Name="任务表">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="标记" Binding="{Binding BadgeText}" Width="80"/>
+                            <DataGridTextColumn Header="任务" Binding="{Binding Name}" Width="1.8*"/>
+                            <DataGridTextColumn Header="触发器" Binding="{Binding TriggersText}" Width="110"/>
+                            <DataGridTextColumn Header="状态" Binding="{Binding StateText}" Width="80"/>
+                            <DataGridTextColumn Header="来源" Binding="{Binding SourceName}" Width="1.2*"/>
+                            <DataGridTextColumn Header="上次运行" Binding="{Binding LastRunText}" Width="130"/>
+                            <DataGridTextColumn Header="命令" Binding="{Binding Command}" Width="2.2*"/>
+                            <DataGridTemplateColumn Header="操作" Width="130">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Button Content="⏻ 开关" FontSize="11.5" Padding="8,3"
+                                                    ToolTip.Tip="在 启用/禁用 之间切换（schtasks）。"
+                                                    Command="{Binding $parent[UserControl].DataContext.ToggleTaskCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    AutomationProperties.AutomationId="btn-task-toggle"/>
+                                            <Button Content="✕" FontSize="11.5" Padding="8,3"
+                                                    Command="{Binding $parent[UserControl].DataContext.DeleteTaskCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="删除计划任务（schtasks /delete）。"
+                                                    AutomationProperties.AutomationId="btn-task-delete"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>

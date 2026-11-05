@@ -40,17 +40,47 @@ public partial class StartupItemViewModel : ObservableObject
     }
 }
 
-/// <summary>开机启动项管理主 VM。</summary>
+/// <summary>服务行 VM。</summary>
+public partial class ServiceItemViewModel : ObservableObject
+{
+    public required ServiceEntry Model { get; init; }
+    public string Name => Model.Name;
+    public string DisplayName => Model.DisplayName;
+    public string ImagePath => Model.ImagePath;
+    public string? ServiceDll => Model.ServiceDll;
+    public string? Account => Model.Account;
+    public string? TargetPath => Model.TargetPath;
+    public string SourceName => Model.SourceName;
+    public string BadgeText => Model.BadgeText;
+    public bool IsResidual => Model.IsResidual;
+    public bool IsSystem => Model.IsSystem;
+
+    [ObservableProperty]
+    private string _startTypeText = "";
+
+    public void RefreshFromModel() => StartTypeText = Model.StartTypeText;
+}
+
+/// <summary>开机启动项管理主 VM（Tab1 启动项 / Tab2 服务）。</summary>
 public partial class StartupMgrViewModel : ObservableObject
 {
     private readonly IToolHost _host;
     private readonly StartupScanner _scanner = new();
     private readonly StartupCleaner _cleaner = new();
+    private readonly ServiceScanner _serviceScanner = new();
 
     public StartupMgrViewModel(IToolHost host) => _host = host;
 
     public ObservableCollection<StartupItemViewModel> Entries { get; } = [];
     public ObservableCollection<StartupBackupRecord> Backups { get; } = [];
+
+    public ObservableCollection<ServiceItemViewModel> Services { get; } = [];
+
+    /// <summary>服务筛选候选。</summary>
+    public static IReadOnlyList<string> ServiceFilters { get; } = ["自动启动", "全部含手动", "仅第三方"];
+
+    [ObservableProperty]
+    private string _serviceFilter = "自动启动";
 
     [ObservableProperty]
     private string _searchText = "";
@@ -74,6 +104,33 @@ public partial class StartupMgrViewModel : ObservableObject
     public int ResidualCount => Entries.Count(e => e.IsResidual);
     public int DisabledCount => Entries.Count(e => !e.IsEnabled);
     public int RegistryCount => Entries.Count(e => e.Model.Location is not (StartupLocation.UserFolder or StartupLocation.CommonFolder));
+
+    public int ServiceAutoCount => Services.Count(s => s.Model.StartType == ServiceStartType.Automatic);
+    public int ServiceResidualCount => Services.Count(s => s.IsResidual);
+    public int ServiceThirdPartyCount => Services.Count(s => !s.IsSystem && s.Model.StartType == ServiceStartType.Automatic);
+
+    /// <summary>服务视图过滤（按筛选 + 搜索）。</summary>
+    public IEnumerable<ServiceItemViewModel> FilteredServices
+    {
+        get
+        {
+            IEnumerable<ServiceItemViewModel> q = Services;
+            q = ServiceFilter switch
+            {
+                "自动启动" => q.Where(s => s.Model.StartType == ServiceStartType.Automatic),
+                "仅第三方" => q.Where(s => !s.IsSystem && s.Model.StartType != ServiceStartType.Disabled),
+                _ => q,
+            };
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                q = q.Where(s => s.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                    || s.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                    || s.SourceName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                    || s.ImagePath.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+            }
+            return q;
+        }
+    }
 
     public IEnumerable<StartupItemViewModel> FilteredEntries
     {
@@ -103,6 +160,15 @@ public partial class StartupMgrViewModel : ObservableObject
             await Task.Delay(120);
             IProgress<string> progress = new Progress<string>(msg => StatusText = msg);
             var models = await Task.Run(() => _scanner.ScanAll(msg => progress.Report(msg)));
+            var services = await Task.Run(() => _serviceScanner.ScanAll(msg => progress.Report(msg)));
+
+            Services.Clear();
+            foreach (var sv in services) Services.Add(new ServiceItemViewModel { Model = sv });
+            foreach (var sv in Services) sv.RefreshFromModel();
+            OnPropertyChanged(nameof(FilteredServices));
+            OnPropertyChanged(nameof(ServiceAutoCount));
+            OnPropertyChanged(nameof(ServiceResidualCount));
+            OnPropertyChanged(nameof(ServiceThirdPartyCount));
 
             Entries.Clear();
             foreach (var m in models) Entries.Add(new StartupItemViewModel { Model = m });
@@ -113,7 +179,7 @@ public partial class StartupMgrViewModel : ObservableObject
             OnPropertyChanged(nameof(ResidualCount));
             OnPropertyChanged(nameof(DisabledCount));
             OnPropertyChanged(nameof(RegistryCount));
-            AddLog($"✔ 扫描完成：{TotalCount} 项（注册表 {RegistryCount} · 残留 {ResidualCount} · 已禁用 {DisabledCount}）。");
+            AddLog($"✔ 扫描完成：启动项 {TotalCount}（残留 {ResidualCount} · 已禁用 {DisabledCount}）· 服务 {Services.Count}（自动 {ServiceAutoCount} · 残留 {ServiceResidualCount}）。");
         }
         catch (Exception ex)
         {
@@ -128,6 +194,7 @@ public partial class StartupMgrViewModel : ObservableObject
     partial void OnSearchTextChanged(string value)
     {
         OnPropertyChanged(nameof(FilteredEntries));
+        OnPropertyChanged(nameof(FilteredServices));
         if (!string.IsNullOrWhiteSpace(value))
         {
             StatusText = $"🔍 已过滤：{FilteredEntries.Count()} / {TotalCount} 项匹配";
@@ -189,6 +256,27 @@ public partial class StartupMgrViewModel : ObservableObject
 
     [RelayCommand]
     private void OpenBackups() => _cleaner.OpenBackupFolder();
+
+    partial void OnServiceFilterChanged(string value) => OnPropertyChanged(nameof(FilteredServices));
+
+    [RelayCommand]
+    private void SetServiceManual(ServiceItemViewModel item) => ApplyServiceStart(item, ServiceStartType.Manual);
+
+    [RelayCommand]
+    private void SetServiceAuto(ServiceItemViewModel item) => ApplyServiceStart(item, ServiceStartType.Automatic);
+
+    [RelayCommand]
+    private void SetServiceDisabled(ServiceItemViewModel item) => ApplyServiceStart(item, ServiceStartType.Disabled);
+
+    private void ApplyServiceStart(ServiceItemViewModel item, ServiceStartType type)
+    {
+        var result = _serviceScanner.SetStartType(item.Model, type);
+        item.RefreshFromModel();
+        AddLog(result.Message);
+        OnPropertyChanged(nameof(FilteredServices));
+        OnPropertyChanged(nameof(ServiceAutoCount));
+        OnPropertyChanged(nameof(ServiceThirdPartyCount));
+    }
 
     [RelayCommand]
     private void Elevate() => _host.ElevateRestart();

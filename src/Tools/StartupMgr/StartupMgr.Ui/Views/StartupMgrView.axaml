@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:StartupMgr.Ui.ViewModels"
              x:Class="StartupMgr.Ui.Views.StartupMgrView">
 
     <UserControl.Styles>
@@ -74,6 +75,20 @@
                         <StackPanel><TextBlock Text="已禁用" Classes="cardLabel"/><TextBlock Text="{Binding DisabledCount}" Classes="cardValue"/></StackPanel>
                     </Border>
                 </Grid>
+                <Grid ColumnDefinitions="*,*,*,*">
+                    <Border Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="服务总数" Classes="cardLabel"/><TextBlock Text="{Binding Services.Count}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="自动启动服务" Classes="cardLabel"/><TextBlock Text="{Binding ServiceAutoCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Text="自动·第三方" Classes="cardLabel"/><TextBlock Text="{Binding ServiceThirdPartyCount}" Classes="cardValue"/></StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Classes="card" Padding="12,8">
+                        <StackPanel><TextBlock Text="服务⚠ 残留" Classes="cardLabel"/><TextBlock Text="{Binding ServiceResidualCount}" Classes="cardValue" Foreground="#D13438"/></StackPanel>
+                    </Border>
+                </Grid>
 
                 <!-- 新增启动项 -->
                 <Border Classes="card" Padding="12,10">
@@ -97,6 +112,9 @@
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" Opacity="0.7" Margin="2,10,0,0"
                    TextWrapping="Wrap" AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
 
+        <!-- 两个 Tab：启动项 / 服务 -->
+        <TabControl AutomationProperties.AutomationId="tabs-main" AutomationProperties.Name="主页签">
+            <TabItem Header="🚀 启动项" AutomationProperties.AutomationId="tab-startup">
         <!-- 列表 -->
         <DataGrid ItemsSource="{Binding FilteredEntries}" AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserSortColumns="True" GridLinesVisibility="Horizontal"
@@ -133,6 +151,53 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
+            </TabItem>
+
+            <TabItem Header="⚙ 服务" AutomationProperties.AutomationId="tab-services">
+                <DockPanel Margin="0,10,0,0">
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <TextBlock Text="修改启动类型需要管理员；改错系统服务可能影响功能，仅建议处理明确认识的第三方服务。" Opacity="0.6" FontSize="12" TextWrapping="Wrap"/>
+                        <ComboBox Width="140" HorizontalAlignment="Right" ItemsSource="{x:Static vm:StartupMgrViewModel.ServiceFilters}"
+                                  SelectedItem="{Binding ServiceFilter}"
+                                  AutomationProperties.AutomationId="combo-service-filter" AutomationProperties.Name="服务筛选"/>
+                    </DockPanel>
+                    <DataGrid ItemsSource="{Binding FilteredServices}" AutoGenerateColumns="False" IsReadOnly="True"
+                              CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                              AutomationProperties.AutomationId="grid-services" AutomationProperties.Name="服务表">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="标记" Binding="{Binding BadgeText}" Width="80"/>
+                            <DataGridTextColumn Header="服务名" Binding="{Binding Name}" Width="1.4*"/>
+                            <DataGridTextColumn Header="显示名" Binding="{Binding DisplayName}" Width="1.8*"/>
+                            <DataGridTextColumn Header="启动" Binding="{Binding StartTypeText}" Width="90"/>
+                            <DataGridTextColumn Header="来源" Binding="{Binding SourceName}" Width="1.2*"/>
+                            <DataGridTextColumn Header="账户" Binding="{Binding Account}" Width="120"/>
+                            <DataGridTextColumn Header="目标" Binding="{Binding TargetPath}" Width="2.2*"/>
+                            <DataGridTemplateColumn Header="操作" Width="200">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Button Content="自动" FontSize="11.5" Padding="8,3"
+                                                    Command="{Binding $parent[UserControl].DataContext.SetServiceAutoCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    AutomationProperties.AutomationId="btn-svc-auto"/>
+                                            <Button Content="手动" FontSize="11.5" Padding="8,3"
+                                                    Command="{Binding $parent[UserControl].DataContext.SetServiceManualCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    AutomationProperties.AutomationId="btn-svc-manual"/>
+                                            <Button Content="禁用" FontSize="11.5" Padding="8,3"
+                                                    Command="{Binding $parent[UserControl].DataContext.SetServiceDisabledCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="禁用后服务不再自启；系统服务慎用。"
+                                                    AutomationProperties.AutomationId="btn-svc-disable"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
     </DockPanel>
 
     <!-- 扫描中遮罩 -->

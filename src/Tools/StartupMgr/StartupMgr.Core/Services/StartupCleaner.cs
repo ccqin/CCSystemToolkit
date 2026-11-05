@@ -29,6 +29,11 @@ public sealed class StartupCleaner
 
     public StartupResult Toggle(StartupEntry entry, bool disable)
     {
+        if (!entry.SupportsToggle)
+        {
+            return new StartupResult(false,
+                $"✘ 「{entry.LocationText}」类启动项不受 StartupApproved 禁用机制管辖，仅提供查看与删除。");
+        }
         try
         {
             StartupScanner.SetApprovedDisabled(StartupScanner.ApprovedKeyOf(entry), entry.Name, disable);
@@ -46,6 +51,11 @@ public sealed class StartupCleaner
 
     public StartupResult Delete(StartupEntry entry)
     {
+        if (!entry.SupportsDelete)
+        {
+            return new StartupResult(false,
+                $"✘ 「{entry.LocationText}」是系统关键监控位（改坏可能导致无法进桌面），本工具仅展示不提供修改。");
+        }
         try
         {
             if (entry.Location is StartupLocation.UserFolder or StartupLocation.CommonFolder)
@@ -58,11 +68,25 @@ public sealed class StartupCleaner
                 return new StartupResult(true, $"✔ 已删除启动文件「{entry.Name}」（已备份，可还原）。");
             }
 
-            var (hive, path) = entry.Location switch
+            RegistryKey hive;
+            string path;
+            if (entry.Location == StartupLocation.DefaultUserRun)
             {
-                StartupLocation.HkcuRun or StartupLocation.HkcuRunOnce => (Registry.CurrentUser, SubPath(entry)),
-                _ => (Registry.LocalMachine, SubPath(entry)),
-            };
+                hive = Registry.Users;
+                path = @".DEFAULT\Software\Microsoft\Windows\CurrentVersion\Run";
+            }
+            else if (entry.Location is StartupLocation.HkcuPolicyRun or StartupLocation.HklmPolicyRun)
+            {
+                hive = entry.Location == StartupLocation.HkcuPolicyRun ? Registry.CurrentUser : Registry.LocalMachine;
+                path = @"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run";
+            }
+            else
+            {
+                hive = entry.Location is StartupLocation.HkcuRun or StartupLocation.HkcuRunOnce
+                    ? Registry.CurrentUser
+                    : Registry.LocalMachine;
+                path = SubPath(entry);
+            }
             using (var key = hive.OpenSubKey(path, writable: true))
             {
                 if (key is null)
@@ -71,7 +95,8 @@ public sealed class StartupCleaner
                 key.DeleteValue(entry.Name);
                 SaveRecord(new StartupBackupRecord(
                     DateTime.Now.ToString("yyyyMMdd-HHmmss"), DateTime.Now, "registry",
-                    hive == Registry.CurrentUser ? "HKCU" : "HKLM", path, entry.Name, raw?.ToString()));
+                    hive == Registry.CurrentUser ? "HKCU" : hive == Registry.Users ? "HKU" : "HKLM",
+                    path, entry.Name, raw?.ToString()));
             }
             return new StartupResult(true, $"✔ 已删除「{entry.Name}」（已备份，可还原）。");
         }
@@ -115,7 +140,12 @@ public sealed class StartupCleaner
         {
             if (record.Kind == "registry")
             {
-                var hive = record.Hive == "HKCU" ? Registry.CurrentUser : Registry.LocalMachine;
+                var hive = record.Hive switch
+                {
+                    "HKCU" => Registry.CurrentUser,
+                    "HKU" => Registry.Users,
+                    _ => Registry.LocalMachine,
+                };
                 using var key = hive.CreateSubKey(record.KeyPath!, writable: true);
                 key.SetValue(record.ValueName!, record.ValueData ?? "");
                 return new StartupResult(true, $"✔ 已还原注册表启动项「{record.ValueName}」。");

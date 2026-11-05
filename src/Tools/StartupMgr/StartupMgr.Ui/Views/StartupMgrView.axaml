@@ -112,6 +112,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <ToggleSwitch IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                          IsVisible="{Binding SupportsToggle}"
                                           Command="{Binding $parent[UserControl].DataContext.ToggleEntryCommand}"
                                           CommandParameter="{Binding}"
                                           AutomationProperties.AutomationId="switch-item" AutomationProperties.Name="{Binding Name}"/>
@@ -122,6 +123,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Content="✕ 删除" FontSize="12" Padding="8,3"
+                                    IsVisible="{Binding SupportsDelete}"
                                     Command="{Binding $parent[UserControl].DataContext.DeleteEntryCommand}"
                                     CommandParameter="{Binding}"
                                     ToolTip.Tip="删除前自动备份，可从「备份」还原。"

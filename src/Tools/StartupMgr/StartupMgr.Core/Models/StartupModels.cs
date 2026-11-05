@@ -10,6 +10,11 @@ public enum StartupLocation
     HklmRunOnce,
     UserFolder,     // 用户启动文件夹
     CommonFolder,   // 全局启动文件夹（需管理员删）
+    HkcuPolicyRun,  // HKCU\...\Policies\Explorer\Run（组策略 Run）
+    HklmPolicyRun,  // HKLM\...\Policies\Explorer\Run
+    Winlogon,       // HKLM\...\Winlogon 的 Userinit/Shell 追加项（监控位，恶意软件常用）
+    ActiveSetup,    // HKLM\...\Active Setup\Installed Components 的 StubPath
+    DefaultUserRun, // HKU\.DEFAULT 的 Run（登录屏幕）
 }
 
 public enum StartupStatus
@@ -43,6 +48,13 @@ public sealed class StartupEntry
     public bool IsSystem => Publisher?.Contains("Microsoft", StringComparison.OrdinalIgnoreCase) == true
                             || TargetPath?.StartsWith(@"C:\Windows", StringComparison.OrdinalIgnoreCase) == true;
 
+    /// <summary>StartupApproved 禁用机制只对 Run/RunOnce/启动文件夹有效。</summary>
+    public bool SupportsToggle => Location is not (StartupLocation.Winlogon or StartupLocation.ActiveSetup
+        or StartupLocation.HkcuPolicyRun or StartupLocation.HklmPolicyRun or StartupLocation.DefaultUserRun);
+
+    /// <summary>Winlogon/ActiveSetup 是系统关键监控位，不提供删除（改坏会进不了桌面）。</summary>
+    public bool SupportsDelete => SupportsToggle || Location is StartupLocation.HkcuPolicyRun or StartupLocation.HklmPolicyRun or StartupLocation.DefaultUserRun;
+
     public string LocationText => Location switch
     {
         StartupLocation.HkcuRun => "HKCU·Run",
@@ -51,7 +63,12 @@ public sealed class StartupEntry
         StartupLocation.HkcuRunOnce => "HKCU·RunOnce",
         StartupLocation.HklmRunOnce => "HKLM·RunOnce",
         StartupLocation.UserFolder => "用户启动夹",
-        _ => "全局启动夹",
+        StartupLocation.CommonFolder => "全局启动夹",
+        StartupLocation.HkcuPolicyRun => "策略Run·用户",
+        StartupLocation.HklmPolicyRun => "策略Run·机器",
+        StartupLocation.Winlogon => "Winlogon",
+        StartupLocation.ActiveSetup => "ActiveSetup",
+        _ => ".DEFAULT·Run",
     };
 
     public string StatusText => Status == StartupStatus.Disabled ? "已禁用" : "启用";

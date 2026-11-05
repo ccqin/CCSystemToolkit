@@ -56,6 +56,12 @@ public sealed class StartupScanner
         ScanFolder(Environment.ExpandEnvironmentVariables(UserFolder), StartupLocation.UserFolder, "StartupFolder", entries);
         ScanFolder(Environment.ExpandEnvironmentVariables(CommonFolder), StartupLocation.CommonFolder, "StartupFolder", entries);
 
+        progress?.Invoke("扫描组策略 Run / Winlogon / Active Setup…");
+        ScanPolicyRun(entries);
+        ScanWinlogon(entries);
+        ScanActiveSetup(entries);
+        ScanDefaultUserRun(entries);
+
         return [.. entries.OrderBy(e => e.Status == StartupStatus.Disabled ? 1 : 0).ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)];
     }
 
@@ -83,6 +89,95 @@ public sealed class StartupScanner
                 SourcePath = file,
             });
         }
+    }
+
+    // ----- 组策略 Run / Winlogon / Active Setup / .DEFAULT（补充启动位置） -----
+
+    private static void ScanPolicyRun(List<StartupEntry> entries)
+    {
+        foreach (var (hive, loc) in new[]
+                 {
+                     (Registry.CurrentUser, StartupLocation.HkcuPolicyRun),
+                     (Registry.LocalMachine, StartupLocation.HklmPolicyRun),
+                 })
+        {
+            using var key = hive.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run");
+            if (key is null) continue;
+            foreach (var name in key.GetValueNames())
+            {
+                if (key.GetValue(name) is not string cmd) continue;
+                AddCommandEntry(entries, name, cmd, loc,
+                    $@"{(hive == Registry.CurrentUser ? "HKCU" : "HKLM")}\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run");
+            }
+        }
+    }
+
+    /// <summary>Winlogon：Userinit/Shell 正常应为 userinit.exe / explorer.exe，出现其他程序即为追加注入（监控告警位）。</summary>
+    private static void ScanWinlogon(List<StartupEntry> entries)
+    {
+        using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon");
+        if (key is null) return;
+        foreach (var valueName in new[] { "Userinit", "Shell" })
+        {
+            if (key.GetValue(valueName) is not string val || string.IsNullOrWhiteSpace(val)) continue;
+            // 拆分多值（逗号分隔），跳过系统正常项
+            foreach (var part in val.Split(',').Select(p => p.Trim()).Where(p => p.Length > 0))
+            {
+                var normalized = Environment.ExpandEnvironmentVariables(part).ToLowerInvariant();
+                if (normalized.EndsWith("userinit.exe") || normalized.EndsWith("explorer.exe")) continue;
+                AddCommandEntry(entries, $"Winlogon·{valueName}", part, StartupLocation.Winlogon,
+                    @"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon");
+            }
+        }
+    }
+
+    /// <summary>Active Setup：Installed Components 下的 StubPath（每个用户首次/版本变化时登录执行）。</summary>
+    private static void ScanActiveSetup(List<StartupEntry> entries)
+    {
+        foreach (var hive in new[] { Registry.LocalMachine, Registry.CurrentUser })
+        {
+            using var root = hive.OpenSubKey(@"Software\Microsoft\Active Setup\Installed Components");
+            if (root is null) continue;
+            foreach (var sub in root.GetSubKeyNames())
+            {
+                using var k = root.OpenSubKey(sub);
+                if (k?.GetValue("StubPath") is not string stub || string.IsNullOrWhiteSpace(stub)) continue;
+                var title = (k.GetValue(null) as string) ?? sub;
+                AddCommandEntry(entries, title, stub, StartupLocation.ActiveSetup,
+                    $@"{(hive == Registry.LocalMachine ? "HKLM" : "HKCU")}\Software\Microsoft\Active Setup\Installed Components\{sub}");
+            }
+        }
+    }
+
+    /// <summary>HKU\.DEFAULT 的 Run（登录屏幕/默认用户配置）。</summary>
+    private static void ScanDefaultUserRun(List<StartupEntry> entries)
+    {
+        using var key = Registry.Users.OpenSubKey(@".DEFAULT\Software\Microsoft\Windows\CurrentVersion\Run");
+        if (key is null) return;
+        foreach (var name in key.GetValueNames())
+        {
+            if (key.GetValue(name) is not string cmd) continue;
+            AddCommandEntry(entries, name, cmd, StartupLocation.DefaultUserRun,
+                @"HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Run");
+        }
+    }
+
+    private static void AddCommandEntry(List<StartupEntry> entries, string name, string command, StartupLocation loc, string regPath)
+    {
+        var expanded = Environment.ExpandEnvironmentVariables(command);
+        var target = ExtractTarget(expanded);
+        var (publisher, residual) = InspectTarget(target);
+        entries.Add(new StartupEntry
+        {
+            Name = name,
+            Command = expanded,
+            Location = loc,
+            Status = IsApprovedDisabled("Run", name) ? StartupStatus.Disabled : StartupStatus.Enabled,
+            TargetPath = target,
+            Publisher = publisher,
+            IsResidual = residual,
+            SourcePath = $@"{regPath}\{name}",
+        });
     }
 
     // ----- StartupApproved（任务管理器同一禁用机制；均在 HKCU） -----

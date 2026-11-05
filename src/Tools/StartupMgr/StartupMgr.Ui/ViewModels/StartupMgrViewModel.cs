@@ -19,6 +19,8 @@ public partial class StartupItemViewModel : ObservableObject
     public string SourcePath => Model.SourcePath;
     public bool IsResidual => Model.IsResidual;
     public bool IsSystem => Model.IsSystem;
+    public bool SupportsToggle => Model.SupportsToggle;
+    public bool SupportsDelete => Model.SupportsDelete;
 
     public string BadgeText => Model.IsResidual ? "⚠ 残留"
         : Model.IsSystem ? "✔ 系统"

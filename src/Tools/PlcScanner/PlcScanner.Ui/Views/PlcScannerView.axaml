@@ -42,7 +42,8 @@
                 <CheckBox Grid.Column="0" Content="端口探测" IsChecked="{Binding ProbePorts}" VerticalAlignment="Center"
                           AutomationProperties.AutomationId="chk-ports"/>
                 <TextBox Grid.Column="1" Text="{Binding PortsText}" Classes="mono" Margin="8,0,0,0"
-                         ToolTip.Tip="逗号分隔，如 23,21,102"
+                         MinWidth="260" MaxWidth="440"
+                         ToolTip.Tip="逗号分隔，如 23,21,102,502,44818"
                          AutomationProperties.AutomationId="input-ports"/>
                 <Button Grid.Column="2" Content="▶ 开始扫描" Classes="accent" Command="{Binding StartScanCommand}"
                         IsEnabled="{Binding !Scanning}" Margin="16,0,0,0"

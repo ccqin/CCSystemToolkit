@@ -36,30 +36,41 @@
             </Grid>
         </Border>
 
-        <!-- 第 3 行：端口 + 开始/停止/清空 + 进度 -->
-        <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
-            <Grid ColumnDefinitions="Auto,110,Auto,Auto,Auto,Auto,*,Auto">
+        <!-- 第 3 行：端口探测 + 扫描控制 -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,0">
+            <Grid ColumnDefinitions="Auto,260,Auto,Auto,Auto,Auto,Auto">
                 <CheckBox Grid.Column="0" Content="端口探测" IsChecked="{Binding ProbePorts}" VerticalAlignment="Center"
                           AutomationProperties.AutomationId="chk-ports"/>
-                <TextBox Grid.Column="1" Text="{Binding PortsText}" Classes="mono" Margin="8,0,0,0"
-                         MinWidth="260" MaxWidth="440"
+                <TextBox Grid.Column="1" Text="{Binding PortsText}" Classes="mono" Margin="10,0,0,0"
                          ToolTip.Tip="逗号分隔，如 23,21,102,502,44818"
                          AutomationProperties.AutomationId="input-ports"/>
                 <Button Grid.Column="2" Content="▶ 开始扫描" Classes="accent" Command="{Binding StartScanCommand}"
-                        IsEnabled="{Binding !Scanning}" Margin="16,0,0,0"
+                        IsEnabled="{Binding !Scanning}" Margin="18,0,0,0"
                         AutomationProperties.AutomationId="btn-start" AutomationProperties.Name="开始扫描"/>
                 <Button Grid.Column="3" Content="■ 停止" Command="{Binding StopScanCommand}"
-                        IsEnabled="{Binding Scanning}" Margin="8,0,0,0"
+                        IsEnabled="{Binding Scanning}" Margin="10,0,0,0"
                         AutomationProperties.AutomationId="btn-stop"/>
-                <Button Grid.Column="4" Content="清空结果" Command="{Binding ClearResultsCommand}" Margin="8,0,0,0"
+                <Button Grid.Column="4" Content="清空结果" Command="{Binding ClearResultsCommand}" Margin="10,0,0,0"
                         AutomationProperties.AutomationId="btn-clear"/>
-                <ProgressBar Grid.Column="5" MinWidth="200" Value="{Binding Scanned}" Maximum="{Binding Total}"
-                             Margin="16,0,0,0" VerticalAlignment="Center" MinHeight="14"/>
-                <TextBlock Grid.Column="6" Text="{Binding StatusText}" Opacity="0.7" VerticalAlignment="Center"
-                           Margin="12,0,0,0" TextTrimming="CharacterEllipsis"
-                           AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
-                <TextBlock Grid.Column="7" Text="{Binding EtaText}" Opacity="0.55" VerticalAlignment="Center"
+                <TextBlock Grid.Column="5" VerticalAlignment="Center" Margin="14,0,0,0" Foreground="#107C10"
+                           Text="{Binding FoundCount}" FontWeight="SemiBold"
+                           AutomationProperties.AutomationId="tb-found"/>
+                <TextBlock Grid.Column="6" Text="{Binding EtaText}" Opacity="0.55" VerticalAlignment="Center" Margin="14,0,0,0"
                            AutomationProperties.AutomationId="tb-eta"/>
+            </Grid>
+        </Border>
+
+        <!-- 第 4 行：进度与状态 -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="16,8" Margin="0,10,0,12">
+            <Grid ColumnDefinitions="260,Auto,*">
+                <ProgressBar Grid.Column="0" Value="{Binding Scanned}" Maximum="{Binding Total}" MinHeight="14"/>
+                <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0" Classes="mono" FontSize="12"
+                           AutomationProperties.AutomationId="tb-progress">
+                    <Run Text="{Binding Scanned}"/> / <Run Text="{Binding Total}"/>
+                </TextBlock>
+                <TextBlock Grid.Column="2" Text="{Binding StatusText}" Opacity="0.75" VerticalAlignment="Center"
+                           Margin="16,0,0,0" TextTrimming="CharacterEllipsis"
+                           AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
             </Grid>
         </Border>
 

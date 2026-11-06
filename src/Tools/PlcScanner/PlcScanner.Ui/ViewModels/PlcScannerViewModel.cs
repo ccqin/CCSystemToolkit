@@ -62,6 +62,10 @@ public partial class PlcScannerViewModel : ObservableObject
     [ObservableProperty]
     private string _etaText = "";
 
+    /// <summary>发现设备计数（实时）。</summary>
+    [ObservableProperty]
+    private string _foundCount = "";
+
     [ObservableProperty]
     private string _statusText = "就绪";
 
@@ -82,44 +86,14 @@ public partial class PlcScannerViewModel : ObservableObject
     partial void OnSelectedNicChanged(NicEntry? value)
     {
         NicIpsText = value is null ? "" : ScanOrchestrator.NicIpsText(value);
-        if (value is not null) SaveLastNic(value.Display);
     }
 
     private void LoadNics()
     {
-        var prev = SelectedNic?.Display ?? LoadLastNic();
+        var prev = SelectedNic?.Display;
         Nics.Clear();
         foreach (var nic in ScanOrchestrator.LoadNics(ShowVirtual)) Nics.Add(nic);
-        // 默认选择：上次选择 → “以太网 3”（接 PLC 的网卡）→ 第一个非自动 Up 物理网卡
-        SelectedNic = Nics.FirstOrDefault(n => n.Display == prev)
-                      ?? Nics.FirstOrDefault(n => n.Display.Contains("以太网 3"))
-                      ?? Nics.FirstOrDefault(n => !n.Display.StartsWith("★") && n.Display.StartsWith("●"))
-                      ?? Nics.FirstOrDefault();
-        SaveLastNic(SelectedNic?.Display);
-    }
-
-    private static string SettingsDir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SystemToolkit", "PlcScanner");
-
-    private static string? LoadLastNic()
-    {
-        try
-        {
-            var f = Path.Combine(SettingsDir, "last-nic.txt");
-            return File.Exists(f) ? File.ReadAllText(f).Trim() : null;
-        }
-        catch { return null; }
-    }
-
-    private static void SaveLastNic(string? display)
-    {
-        try
-        {
-            if (display is null) return;
-            Directory.CreateDirectory(SettingsDir);
-            File.WriteAllText(Path.Combine(SettingsDir, "last-nic.txt"), display);
-        }
-        catch { }
+        SelectedNic = Nics.FirstOrDefault(n => n.Display == prev) ?? Nics.FirstOrDefault();
     }
 
     [RelayCommand]
@@ -160,6 +134,7 @@ public partial class PlcScannerViewModel : ObservableObject
         foreach (var ip in ScanOrchestrator.GetAllLocalIps()) _localIps.Add(ip);
         _found.Clear();
         Devices.Clear();
+        FoundCount = "";
         Scanned = 0;
         Total = (int)total;
         Scanning = true;
@@ -187,6 +162,7 @@ public partial class PlcScannerViewModel : ObservableObject
                 {
                     _found[item.IpNet] = item;
                     if (!item.IsLocal || !HideLocal) Devices.Add(item);
+                    FoundCount = $"发现 {Devices.Count} 台";
                 }),
                 onPortsDone: (ipNet, open) => Dispatcher.UIThread.Post(() =>
                 {

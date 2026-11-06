@@ -5,6 +5,7 @@ using MenuClean.Ui;
 using NetRouteList.Ui;
 using PermDoctor.Ui;
 using ShellExt.Ui;
+using PlcScanner.Ui;
 using StartupMgr.Ui;
 using Toolkit.App.Tools;
 using Toolkit.App.ViewModels;
@@ -32,6 +33,7 @@ public partial class App : Application
                 new MenuCleanToolModule { Host = main },
                 new ShellExtToolModule { Host = main },
                 new StartupMgrToolModule { Host = main },
+                new PlcScannerToolModule { Host = main },
                 new LogsToolModule(main) { Host = main },
                 // 未来工具在此追加……
             ], new HomeView { DataContext = main });

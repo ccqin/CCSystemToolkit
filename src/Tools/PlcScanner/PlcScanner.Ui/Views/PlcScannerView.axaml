@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PlcScanner.Ui.Views.PlcScannerView">
+
+    <DockPanel Margin="24,18">
+        <!-- 顶部：网卡 + 网段 + 端口 + 扫描控制 -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="16,12" Margin="0,0,0,12">
+            <Grid RowDefinitions="Auto,Auto,Auto" >
+                <!-- 第 1 行：网卡 -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto">
+                    <TextBlock Grid.Column="0" Text="网卡:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Nics}" SelectedItem="{Binding SelectedNic}"
+                              AutomationProperties.AutomationId="combo-nic" AutomationProperties.Name="网卡选择"/>
+                    <Button Grid.Column="2" Content="刷新" Command="{Binding RefreshNicsCommand}" Margin="8,0,0,0"
+                            AutomationProperties.AutomationId="btn-refresh-nic"/>
+                    <CheckBox Grid.Column="3" Content="显示虚拟网卡" IsChecked="{Binding ShowVirtual}" Margin="12,0,0,0"
+                              VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="chk-virtual"/>
+                </Grid>
+                <TextBlock Grid.Row="1" Text="{Binding NicIpsText}" Opacity="0.55" FontSize="12" Margin="44,4,0,8"/>
+
+                <!-- 第 2 行：网段多行输入 -->
+                <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,8">
+                    <TextBlock Grid.Column="0" Text="网段:" VerticalAlignment="Top" Margin="0,6,8,0"/>
+                    <TextBox Grid.Column="1" Text="{Binding RangesText}" MinHeight="58" AcceptsReturn="True"
+                             TextWrapping="Wrap" Classes="mono"
+                             Watermark="192.168.1 / 192.168.1.0/24 / 192.168.1.10-60，多段用换行或分号分隔"
+                             AutomationProperties.AutomationId="input-ranges" AutomationProperties.Name="网段"/>
+                    <Button Grid.Column="2" Content="填入本网卡网段" Command="{Binding FillNicRangesCommand}" Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            AutomationProperties.AutomationId="btn-fill-ranges"/>
+                    <CheckBox Grid.Column="3" Content="隐藏本机结果" IsChecked="{Binding HideLocal}" Margin="12,0,0,0"
+                              VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="chk-hidelocal"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- 第 3 行：端口 + 开始/停止/清空 + 进度 -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="Auto,110,Auto,Auto,Auto,Auto,*,Auto">
+                <CheckBox Grid.Column="0" Content="端口探测" IsChecked="{Binding ProbePorts}" VerticalAlignment="Center"
+                          AutomationProperties.AutomationId="chk-ports"/>
+                <TextBox Grid.Column="1" Text="{Binding PortsText}" Classes="mono" Margin="8,0,0,0"
+                         ToolTip.Tip="逗号分隔，如 23,21,102"
+                         AutomationProperties.AutomationId="input-ports"/>
+                <Button Grid.Column="2" Content="▶ 开始扫描" Classes="accent" Command="{Binding StartScanCommand}"
+                        IsEnabled="{Binding !Scanning}" Margin="16,0,0,0"
+                        AutomationProperties.AutomationId="btn-start" AutomationProperties.Name="开始扫描"/>
+                <Button Grid.Column="3" Content="■ 停止" Command="{Binding StopScanCommand}"
+                        IsEnabled="{Binding Scanning}" Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="btn-stop"/>
+                <Button Grid.Column="4" Content="清空结果" Command="{Binding ClearResultsCommand}" Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="btn-clear"/>
+                <ProgressBar Grid.Column="5" MinWidth="200" Value="{Binding Scanned}" Maximum="{Binding Total}"
+                             Margin="16,0,0,0" VerticalAlignment="Center" MinHeight="14"/>
+                <TextBlock Grid.Column="6" Text="{Binding StatusText}" Opacity="0.7" VerticalAlignment="Center"
+                           Margin="12,0,0,0" TextTrimming="CharacterEllipsis"
+                           AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
+                <TextBlock Grid.Column="7" Text="{Binding EtaText}" Opacity="0.55" VerticalAlignment="Center"
+                           AutomationProperties.AutomationId="tb-eta"/>
+            </Grid>
+        </Border>
+
+        <!-- 结果 -->
+        <DataGrid ItemsSource="{Binding Devices}" AutoGenerateColumns="False" IsReadOnly="True"
+                  CanUserSortColumns="True" GridLinesVisibility="Horizontal" DoubleTapped="OnDeviceDoubleTapped"
+                  AutomationProperties.AutomationId="grid-devices" AutomationProperties.Name="扫描结果">
+            <DataGrid.Styles>
+                <!-- SC 设备金色底 -->
+                <Style Selector="DataGridRow[Tag=sc]">
+                    <Setter Property="Background" Value="#FFF3D68A"/>
+                </Style>
+            </DataGrid.Styles>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="IP 地址" Binding="{Binding Ip}" Width="160"/>
+                <DataGridTextColumn Header="MAC 地址" Binding="{Binding Mac}" Width="170"/>
+                <DataGridTextColumn Header="开放端口" Binding="{Binding Ports}" Width="110"/>
+                <DataGridTextColumn Header="备注" Binding="{Binding Note}" Width="240"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

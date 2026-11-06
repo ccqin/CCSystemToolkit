@@ -82,14 +82,44 @@ public partial class PlcScannerViewModel : ObservableObject
     partial void OnSelectedNicChanged(NicEntry? value)
     {
         NicIpsText = value is null ? "" : ScanOrchestrator.NicIpsText(value);
+        if (value is not null) SaveLastNic(value.Display);
     }
 
     private void LoadNics()
     {
-        var prev = SelectedNic?.Display;
+        var prev = SelectedNic?.Display ?? LoadLastNic();
         Nics.Clear();
         foreach (var nic in ScanOrchestrator.LoadNics(ShowVirtual)) Nics.Add(nic);
-        SelectedNic = Nics.FirstOrDefault(n => n.Display == prev) ?? Nics.FirstOrDefault();
+        // 默认选择：上次选择 → “以太网 3”（接 PLC 的网卡）→ 第一个非自动 Up 物理网卡
+        SelectedNic = Nics.FirstOrDefault(n => n.Display == prev)
+                      ?? Nics.FirstOrDefault(n => n.Display.Contains("以太网 3"))
+                      ?? Nics.FirstOrDefault(n => !n.Display.StartsWith("★") && n.Display.StartsWith("●"))
+                      ?? Nics.FirstOrDefault();
+        SaveLastNic(SelectedNic?.Display);
+    }
+
+    private static string SettingsDir => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SystemToolkit", "PlcScanner");
+
+    private static string? LoadLastNic()
+    {
+        try
+        {
+            var f = Path.Combine(SettingsDir, "last-nic.txt");
+            return File.Exists(f) ? File.ReadAllText(f).Trim() : null;
+        }
+        catch { return null; }
+    }
+
+    private static void SaveLastNic(string? display)
+    {
+        try
+        {
+            if (display is null) return;
+            Directory.CreateDirectory(SettingsDir);
+            File.WriteAllText(Path.Combine(SettingsDir, "last-nic.txt"), display);
+        }
+        catch { }
     }
 
     [RelayCommand]

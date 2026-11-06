@@ -47,7 +47,7 @@ public partial class PlcScannerViewModel : ObservableObject
     private bool _probePorts = true;
 
     [ObservableProperty]
-    private string _portsText = "23,21";
+    private string _portsText = "23,21,102,502";
 
     // ---------- 扫描状态 ----------
     [ObservableProperty]
@@ -160,17 +160,8 @@ public partial class PlcScannerViewModel : ObservableObject
                 }),
                 onPortsDone: (ipNet, open) => Dispatcher.UIThread.Post(() =>
                 {
-                    if (!_found.TryGetValue(ipNet, out var d)) return;
-                    d.Ports = open.Length > 0 ? string.Join(",", open) : "-";
-                    if (open.Contains(21) && open.Contains(23))
-                        d.Note = "★ 疑似 SC 设备（Telnet+FTP）";
-                    var idx = IndexOfDevice(ipNet);
-                    if (idx >= 0)
-                    {
-                        // 触发行刷新：先移除再插回（DeviceItem 无 INPC，避免为此实现接口）
-                        Devices.RemoveAt(idx);
-                        Devices.Insert(idx, d);
-                    }
+                    if (_found.TryGetValue(ipNet, out var d))
+                        d.ApplyPorts(open);
                 }));
 
             if (errors.Count > 0) AddLog($"△ 扫描完成（{errNote}），发现 {_found.Count} 台设备。");
@@ -187,18 +178,31 @@ public partial class PlcScannerViewModel : ObservableObject
 
     private int[] ScanCore_ConcatPorts() => ScanOrchestrator.ParsePorts(PortsText);
 
-    private int IndexOfDevice(uint ipNet)
-    {
-        for (int i = 0; i < Devices.Count; i++)
-            if (Devices[i].IpNet == ipNet) return i;
-        return -1;
-    }
-
     [RelayCommand]
     private void StopScan()
     {
         try { _cts?.Cancel(); } catch { }
         StatusText = "正在停止...";
+    }
+
+    /// <summary>对单个设备用当前端口框的端口重新探测（扫描后补测/换端口再测）。</summary>
+    [RelayCommand]
+    private async Task ProbeDevice(DeviceItem item)
+    {
+        var ports = ScanOrchestrator.ParsePorts(PortsText);
+        if (ports.Length == 0)
+        {
+            StatusText = "端口列表为空或无法解析";
+            return;
+        }
+        item.Ports = "…";
+        StatusText = $"正在探测 {item.Ip}（端口 {string.Join(",", ports)}）...";
+        int[] open = await ScanCore.ProbePortsAsync(item.Ip, ports, 800, CancellationToken.None);
+        item.ApplyPorts(open);
+        var scNote = item.IsScDevice ? " → " + item.Note : "";
+        StatusText = open.Length > 0
+            ? $"{item.Ip}：开放 {string.Join(",", open)}{scNote}"
+            : $"{item.Ip}：指定端口均未开放（可改端口框后再试，如 102/502/44818）";
     }
 
     [RelayCommand]

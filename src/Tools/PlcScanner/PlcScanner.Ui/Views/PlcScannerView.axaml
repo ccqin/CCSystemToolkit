@@ -77,6 +77,17 @@
                 <DataGridTextColumn Header="MAC 地址" Binding="{Binding Mac}" Width="170"/>
                 <DataGridTextColumn Header="开放端口" Binding="{Binding Ports}" Width="110"/>
                 <DataGridTextColumn Header="备注" Binding="{Binding Note}" Width="240"/>
+                <DataGridTemplateColumn Header="操作" Width="110">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="🔍 探端口" FontSize="12" Padding="8,3"
+                                    Command="{Binding $parent[UserControl].DataContext.ProbeDeviceCommand}"
+                                    CommandParameter="{Binding}"
+                                    ToolTip.Tip="用当前端口框的端口重新探测该设备（可改端口后补测，如 102=西门子 S7 / 502=Modbus）。"
+                                    AutomationProperties.AutomationId="btn-probe" AutomationProperties.Name="探测端口"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

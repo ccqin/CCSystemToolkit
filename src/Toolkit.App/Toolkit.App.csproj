@@ -33,6 +33,7 @@
     <ProjectReference Include="..\Tools\ShellExt\ShellExt.Ui\ShellExt.Ui.csproj" />
     <ProjectReference Include="..\Tools\StartupMgr\StartupMgr.Ui\StartupMgr.Ui.csproj" />
     <ProjectReference Include="..\Tools\PlcScanner\PlcScanner.Ui\PlcScanner.Ui.csproj" />
+    <ProjectReference Include="..\Tools\NetTraffic\NetTraffic.Ui\NetTraffic.Ui.csproj" />
   </ItemGroup>
 
 </Project>

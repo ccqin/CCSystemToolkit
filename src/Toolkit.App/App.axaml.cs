@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using MenuClean.Ui;
 using NetRouteList.Ui;
+using NetTraffic.Ui;
 using PermDoctor.Ui;
 using ShellExt.Ui;
 using PlcScanner.Ui;
@@ -34,6 +35,7 @@ public partial class App : Application
                 new ShellExtToolModule { Host = main },
                 new StartupMgrToolModule { Host = main },
                 new PlcScannerToolModule { Host = main },
+                new NetTrafficToolModule { Host = main },
                 new LogsToolModule(main) { Host = main },
                 // 未来工具在此追加……
             ], new HomeView { DataContext = main });

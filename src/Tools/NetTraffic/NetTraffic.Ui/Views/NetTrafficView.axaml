@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NetTraffic.Ui.ViewModels"
+             x:Class="NetTraffic.Ui.Views.NetTrafficView">
+
+    <DockPanel Margin="24,18">
+        <!-- 工具栏 -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+                <TextBlock Grid.Column="0" Text="📶 流量监控" FontSize="16" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="0,0,14,0"/>
+                <Button Grid.Column="1" Content="{Binding Running, Converter={x:Static vm:Converters.RunningText}, FallbackValue='开始监控'}"
+                        Classes="accent" Command="{Binding ToggleMonitorCommand}"
+                        AutomationProperties.AutomationId="btn-toggle" AutomationProperties.Name="开始或停止监控"/>
+                <Button Grid.Column="2" Content="清零累计" Command="{Binding ResetTotalsCommand}" Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="btn-reset"/>
+                <Button Grid.Column="3" Content="以管理员重启" Command="{Binding ElevateCommand}" Margin="8,0,0,0"
+                        ToolTip.Tip="内核 ETW 会话需要管理员权限。重启后回到本页再点开始。"
+                        AutomationProperties.AutomationId="btn-elevate"/>
+                <TextBlock Grid.Column="5" Text="{Binding StatusText}" Opacity="0.7" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" MinWidth="240"
+                           AutomationProperties.AutomationId="tb-status" AutomationProperties.Name="状态"/>
+            </Grid>
+        </Border>
+
+        <!-- 统计卡 -->
+        <Border DockPanel.Dock="Top" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="*,*,*,*">
+                <Border Classes="card" Padding="12,8" Margin="0,0,8,0">
+                    <StackPanel><TextBlock Text="⬇ 总下载速率" Classes="cardLabel"/><TextBlock Text="{Binding TotalDownText}" Classes="cardValue" Foreground="#107C10"/></StackPanel>
+                </Border>
+                <Border Grid.Column="1" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                    <StackPanel><TextBlock Text="⬆ 总上传速率" Classes="cardLabel"/><TextBlock Text="{Binding TotalUpText}" Classes="cardValue" Foreground="#B26A00"/></StackPanel>
+                </Border>
+                <Border Grid.Column="2" Classes="card" Padding="12,8" Margin="0,0,8,0">
+                    <StackPanel><TextBlock Text="最活跃进程" Classes="cardLabel"/><TextBlock Text="{Binding TopText}" Classes="cardValue" FontSize="14" TextWrapping="Wrap"/></StackPanel>
+                </Border>
+                <Border Grid.Column="3" Classes="card" Padding="12,8">
+                    <StackPanel><TextBlock Text="机制" Classes="cardLabel"/><TextBlock Text="内核 ETW（任务管理器同源）" Classes="cardValue" FontSize="13"/></StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- 进程流量表 -->
+        <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
+                  CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                  AutomationProperties.AutomationId="grid-traffic" AutomationProperties.Name="进程流量表">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="进程" Binding="{Binding Name}" Width="1.6*"/>
+                <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70"/>
+                <DataGridTextColumn Header="⬇ 下载速率" Binding="{Binding DownText}" Width="110"/>
+                <DataGridTextColumn Header="⬆ 上传速率" Binding="{Binding UpText}" Width="110"/>
+                <DataGridTextColumn Header="⬇ 会话累计" Binding="{Binding DownTotalText}" Width="110"/>
+                <DataGridTextColumn Header="⬆ 会话累计" Binding="{Binding UpTotalText}" Width="110"/>
+                <DataGridTextColumn Header="TCP 连接" Binding="{Binding Connections}" Width="80"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

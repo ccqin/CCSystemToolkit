@@ -32,6 +32,10 @@ src/Toolkit.App/bin/Release/net10.0/Toolkit.App.exe
 dotnet run --project tools/RouteDump
 ```
 
+### 自动发布（GitHub Actions）
+
+推送到 `master` 自动触发 [Build & Release](.github/workflows/release.yml)：构建自包含单文件 exe（**免装 .NET 运行时，解压即用**）→ 打 tag（`v年.月.日.当日序号`）→ 创建 GitHub Release 并附带 zip。也可在 Actions 页手动触发。
+
 ### 权限说明
 
 - **查看**路由表、网卡、诊断、创建备份：普通权限即可。

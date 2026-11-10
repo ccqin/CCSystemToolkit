@@ -1,0 +1,64 @@
+name: Build & Release
+
+# 推送到 master 自动构建 → 打 tag → 创建 Release（附自包含单文件 exe 的 zip）
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}   # 允许手动触发
+
+permissions:
+  contents: write   # 创建 tag 与 Release 需要
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 需要 tag 历史来生成当天构建号
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Compute version (v年.月.日.当日序号)
+        id: ver
+        shell: pwsh
+        run: |
+          $date = Get-Date -Format 'yyyy.MM.dd'
+          $existing = git tag -l "v$date.*"
+          $n = 1
+          if ($existing) {
+            $max = $existing | ForEach-Object { [int]($_.Split('.')[-1]) } | Measure-Object -Maximum
+            $n = [int]$max.Maximum + 1
+          }
+          $tag = "v$date.$n"
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "name=系统管理工具集 $tag" >> $env:GITHUB_OUTPUT
+          Write-Host "本次发布 tag: $tag"
+
+      - name: Build (Release, self-contained single-file)
+        run: dotnet publish src/Toolkit.App/Toolkit.App.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish
+
+      - name: Package zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path publish\Toolkit.App.exe -DestinationPath "SystemToolkit-${{ steps.ver.outputs.tag }}-win-x64.zip"
+
+      - name: Create tag & Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: ${{ steps.ver.outputs.name }}
+          body: |
+            自动构建发布（push to master）。
+
+            ## 下载
+            - `SystemToolkit-${{ steps.ver.outputs.tag }}-win-x64.zip` — 自包含单文件版，**免安装 .NET 运行时**，解压即用。
+
+            ## 内置工具
+            🌐 路由管理 · 🔐 权限医生 · 🧹 清理右键菜单 · 🧩 COM 扩展管理 · 🚀 开机启动项（含服务/计划任务）· 📡 PLC IP 扫描 · 📶 流量监控 · 📋 操作日志
+          files: SystemToolkit-*.zip
+          generate_release_notes: true

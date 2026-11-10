@@ -1,6 +1,8 @@
 # 系统管理工具集
 
-基于 **Avalonia 12 + .NET 10** 的 Windows 系统管理工具合集：卡片式主页 + 一个工具一个模块。首个内置工具为 **路由管理**（原独立项目 NetRouteList 迁移而来）。
+基于 **Avalonia 12 + .NET 10** 的 Windows 系统管理工具合集：卡片式主页 + 一个工具一个模块（ToolModule）。当前内置 **7 个工具 + 统一日志**：路由管理、权限医生、清理右键菜单、COM 扩展管理、开机启动项（含服务/计划任务）、PLC IP 扫描、流量监控。
+
+> **开发者/AI 助手请先读 [AGENTS.md](AGENTS.md)**：架构约定、新增工具标准流程、构建验证纪律与历史踩坑清单。
 
 ## 功能总览
 
@@ -11,7 +13,8 @@
 | 🧹 **清理右键菜单** | 按「右键场景」管理经典右键菜单（Win11 在「显示更多选项」中），三个 Tab 页：**场景视图**（左选场景：任意文件/文件夹/空白处/驱动器/后缀动态发现，右侧模拟真实菜单逐项开关，显示本场景条目数）；**来源视图**（按软件聚合成可展开组，一键禁用/启用全部注入点）；**全量列表**（搜索过滤、列宽可调）。扫描覆盖 `*`/`Directory`/`AllFilesystemObjects` 等通用根 + `SystemFileAssociations` + `.后缀→ProgID` 间接路径（exefile 等）。自动检测**软件卸载残留**（命令指向不存在的文件，一键清理）、识别 Microsoft/系统项并保护。禁用走 HKCU（完全可逆）、删除前自动 .reg 备份可还原；共享详情面板实时读取注册表值与文件版本信息、生成等效 reg 命令（可复制）；搜索三视图联动；扫描等待遮罩；shellex 禁用后可一键重启资源管理器。 |
 | 🧩 **COM 扩展管理** | 管理 Shell COM 扩展：右键菜单的**动态项**（如“发送到手机”，注册表搜不到文字）、**图标叠加**（系统上限 15 个，超出的排队浪费）、缩略图、预览窗格、属性页。描述三级回退（**Approved 官方清单 → CLSID 组件名 → 键名**）；**疑似菜单文字分析**：以纯数据方式映射 DLL（不执行代码）遍历字符串资源，启发式筛出该扩展实际显示的菜单文字（如夸克的“发送到手机/PDF转Word…”），点击行展开二级详情查看；DLL 残留检测、按 CLSID 聚合注册点、类型筛选与搜索；黑名单禁用可逆 + 一键重启资源管理器；扫描等待遮罩。 |
 | 🚀 **开机启动项** | 两个 Tab 页。**🚀 启动项**：覆盖 **全部 10 类启动位置** —— 注册表 Run/RunOnce（HKCU/HKLM/32位）、组策略 Run、启动文件夹（用户/全局）、Winlogon（Userinit/Shell 追加监控位）、Active Setup、HKU\.DEFAULT·Run、**UWP 应用 StartupTask**（AppModel 状态读写，与系统设置同一存储）；禁用走系统 **StartupApproved**（与任务管理器互通、可逆）；Winlogon/ActiveSetup 只读防误改；残留检测（无引号含空格路径正确解析）；删除自动备份可还原；支持新增 HKCU·Run。**⚙ 服务**：全部用户态服务（Start 类型/账户/svchost 宿主 DLL/来源/残留），筛选 + 一键改启动类型（自动/手动/禁用，需管理员）。**📋 计划任务**：基于 [dahall/TaskScheduler](https://github.com/dahall/TaskScheduler)（COM 通道，加固系统锁死 TaskCache 注册表/Tasks 目录时依然可用），全部任务按触发器类型标注（登录=自启动置顶/开机/定时/事件/空闲/会话），上次/下次运行时间、来源、残留检测；筛选（登录触发/仅第三方/全部）+ 启用禁用开关 + 删除（系统任务需管理员）。 |
-| 📡 **PLC IP 扫描** | ARP 网段扫描发现设备（WinForms 版 PlcIpScanner 迁移）：网卡选择（★自动=全部在线网卡源地址池，多网卡同网段不漏设备；可显示/过滤虚拟网卡）、网段解析（`192.168.1` / `192.168.1.0/24` / `192.168.1.10-60`，多段换行/分号）、SendARP 64 并发探测、自动清理失效 ARP 缓存（管理员下生效）、TCP 端口探测（**21+23 金色标注 ★ 疑似 SC 设备**）、进度条+剩余时间估算、隐藏本机结果、双击行复制 IP、结果排序。 |
+| 📡 **PLC IP 扫描** | ARP 网段扫描发现设备（WinForms 版 PlcIpScanner 迁移）：网卡选择（★自动=全部在线网卡源地址池，多网卡同网段不漏设备）、网段解析（`192.168.1` / `192.168.1.0/24` / `192.168.1.10-60`，多段换行/分号）、SendARP 64 并发探测、自动清理失效 ARP 缓存、TCP 端口探测与识别（**102=西门子 S7 / 502=Modbus / 44818=EtherNet-IP / 21+23=★疑似 SC 设备**，金色标注）、**每行「🔍 探端口」按钮可改端口后补测**、进度条+剩余时间、隐藏本机结果、双击行复制 IP。 |
+| 📶 **流量监控** | 实时查看**哪个进程在下载/上传**（内核 ETW TCP+UDP 事件按进程归因，任务管理器同源机制）：按下载速率排序的进程表（速率/会话累计/TCP 连接数）、总速率与最活跃进程统计卡；**右键进程**：查看详细信息（路径/公司/版本/命令行 + 该进程全部 TCP 连接表：本地→远程/状态）、打开文件位置、网上搜索、复制进程名、结束进程树。需要管理员。 |
 | 📋 **操作日志** | 以工具卡片形式进入的完整日志页：按级别（信息/成功/错误）与来源（各工具）筛选，实时统计“共 N 条 · ✔ · ✘”，一键清空；与状态栏“日志”Flyout 共用同一份数据。 |
 | 🧩 更多工具开发中 | 新工具以 ToolModule 模块接入（见下文）。 |
 | 🎨 **主页与主题** | 卡片背景自定义：⚙ 菜单（12 色色板/取色器/本地图片），默认绿底白字，配置持久化；状态栏**明暗主题循环切换**（跟随系统/浅色/深色，DynamicResource 即时刷新）；全局控件统一圆角、卡片阴影与悬停上浮动效。 |
@@ -93,19 +96,29 @@ SystemToolkit.sln
 │     │  └─ Services/              #   ScanCore（SendARP/网段解析/端口探测/邻居缓存清理，原样迁移）、
 │     │                             #   ScanOrchestrator（网卡枚举/扫描编排/结果回调）
 │     └─ PlcScanner.Ui/            # 扫描页 UI（网卡/网段/进度/结果表）
-│  └─ Tools/StartupMgr/            # 开机启动项管理
+│  └─ Tools/StartupMgr/            # 开机启动项管理（三 Tab：启动项/服务/计划任务）
 │     ├─ StartupMgr.Core/          # 启动项核心
-│     │  ├─ Models/StartupModels.cs    # 启动项模型（位置/状态/残留）
-│     │  └─ Services/                  # StartupScanner（Run/RunOnce/启动文件夹 +
-│     │                                 #   StartupApproved 禁用状态读取）、
-│     │                                 # StartupCleaner（禁用/删除备份还原/新增）
-│     └─ StartupMgr.Ui/            # 列表 UI（开关+删除+新增+备份）+ 等待遮罩
+│     │  ├─ Models/                    #   启动项/服务/计划任务模型
+│     │  └─ Services/                  # StartupScanner（10 类位置 + StartupApproved 禁用状态）、
+│     │                                 #   StartupCleaner（禁用/删除备份还原）、
+│     │                                 #   ServiceScanner（服务枚举 + Start 类型修改）、
+│     │                                 #   TaskScanner（计划任务，基于 dahall/TaskScheduler COM）
+│     └─ StartupMgr.Ui/            # 三 Tab 列表 UI + 等待遮罩
+│  └─ Tools/NetTraffic/            # 流量监控（内核 ETW 按进程归因）
+│     ├─ NetTraffic.Core/          # 流量核心
+│     │  ├─ Models/TrafficModels.cs     #   进程流量行模型（INPC 实时刷新）
+│     │  └─ Services/                  # EtwTrafficMonitor（ETW TCP/UDP 事件按 PID 聚合）、
+│     │                                 #   ConnectionCounter（TCP 连接数）、
+│     │                                 #   ProcessDetailService（进程详情/WMI 命令行/连接表）
+│     └─ NetTraffic.Ui/            # 实时列表 + 统计卡 + 右键菜单 + 详情对话框
 └─ tools/RouteDump/                # 命令行快照/自测工具（只依赖 Core）
 ```
 
 ## 如何新增一个工具
 
-1. 在 `src/Tools/` 下新建 `XxxTool.Ui` 类库（参考 NetRouteList.Ui 的 csproj），引用 `Toolkit.Shell`；
+> 完整流程与纪律见 **[AGENTS.md](AGENTS.md)**，以下为速览。
+
+1. 在 `src/Tools/` 下新建 `XxxTool.Core` + `XxxTool.Ui` 类库（参考任一现有工具的 csproj），Ui 引用 `Toolkit.Shell` 与自己的 Core；
 2. 实现一个 `ToolModule` 子类：`Id / Title / Glyph / Description / CreateView()`（视图的 DataContext 由模块自行配对），需要提权或报状态走 `Host`；
 3. 在 `Toolkit.App/App.axaml.cs` 的 `InitializeTools(...)` 清单里注册；
 4. 主页自动出现新卡片。全局样式（`mono` / `card` / `sectionTitle` 等）在 `Toolkit.App/App.axaml`，工具视图直接复用；
@@ -130,7 +143,8 @@ SystemToolkit.sln
   | 清理右键菜单 | `tab-scene` / `tab-source` / `tab-list` / `btn-scan` / `tb-search` / `list-scenes` / `switch-entry` / `grid-entries` / `expander-source` / `btn-clean-residual` / `btn-backups` / `btn-restart-explorer` / `panel-detail` / `btn-close-detail` / `tb-detail-commands` / `panel-busy` / `tb-status` | 对应中文功能名 |
   | COM 扩展管理 | `combo-kind` / `tb-search` / `btn-scan` / `grid-exts` / `switch-ext` / `row-details`（行详情）/ `btn-restart-explorer` / `panel-busy` / `tb-status` | 对应中文功能名 |
   | 开机启动项 | `tab-startup` / `tab-services` / `btn-scan` / `tb-search` / `grid-startups` / `switch-item` / `btn-delete` / `input-new-name` / `btn-add` / `combo-service-filter` / `grid-services` / `btn-svc-auto` / `btn-svc-manual` / `btn-svc-disable` / `panel-busy` / `tb-status` | 对应中文功能名 |
-  | PLC IP 扫描 | `combo-nic` / `btn-refresh-nic` / `chk-virtual` / `input-ranges` / `btn-fill-ranges` / `chk-hidelocal` / `chk-ports` / `input-ports` / `btn-start` / `btn-stop` / `btn-clear` / `grid-devices` / `tb-status` / `tb-eta` | 对应中文功能名 |
+  | PLC IP 扫描 | `combo-nic` / `btn-refresh-nic` / `chk-virtual` / `input-ranges` / `btn-fill-ranges` / `chk-hidelocal` / `chk-ports` / `input-ports` / `btn-start` / `btn-stop` / `btn-clear` / `btn-probe`（行内探测）/ `grid-devices` / `tb-status` / `tb-eta` / `tb-found` / `tb-progress` | 对应中文功能名 |
+  | 流量监控 | `btn-toggle` / `btn-reset` / `btn-elevate` / `grid-traffic` / `tb-status` / 右键菜单 `menu-detail` / `menu-openlocation` / `menu-websearch` / `menu-copyname` / `menu-kill` / 详情窗 `grid-detail-conns` | 对应中文功能名 |
   | 状态栏（主题） | `btn-theme` | 主题切换 |
 
   `GearIcon` 自定义控件示例了自定义 `AutomationPeer`（`GetNameCore() => "齿轮"`）。新增工具时建议同样为卡片内可交互控件设置 AutomationId。
@@ -156,5 +170,6 @@ SystemToolkit.sln
 - 开机启动项实测：本机三页扫描 —— 启动项 36（含 Active Setup 4 与 UWP StartupTask 10；已禁用状态与任务管理器互通）· 服务 359（自动 120）· 计划任务 202（登录触发 36 · 第三方 8；TaskCache/Tasks 目录锁死由 COM 通道绕过）；10 类启动位置全覆盖。
 - 操作日志卡片实测：点击进入 → 统计/级别筛选/来源筛选/清空均正常，进入工具本身产生日志并实时归集。
 - 卡片背景实测：⚙ Flyout 色板即时变色、取色器自定义色、本地图片背景均正常；重启后配置完整恢复；主题循环切换（跟随系统/浅色/深色）即时生效。
-- PLC IP 扫描实测：192.168.1.0/24 全段 254 地址 → 发现 19 台设备（IP/MAC 全部正确，含 00-30-1B 工控设备网段），扫描-完成状态流转正常；网卡“自动”模式 12 个源地址池生效。
+- PLC IP 扫描实测：192.168.1.0/24 全段 254 地址 → 发现 19 台设备（IP/MAC 全部正确，含 00-30-1B 工控设备网段）；端口识别（S7/Modbus/EtherNet-IP/SC）与单行「🔍 探端口」补测实测通过（157/158/159 探出 23）。
+- 流量监控实测：管理员下内核 ETW 会话正常启动，进程实时速率列表正常显示（用户确认）；非管理员下明确拦截并引导提权；右键菜单五项（详情/文件位置/搜索/复制/结束）与详情对话框（含 TCP 连接表）已交付。
 - RouteDump 输出与本机 `route print` 一致（结构体 ABI 自检通过）。

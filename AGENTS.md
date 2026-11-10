@@ -72,7 +72,7 @@ src/Toolkit.App/bin/Release/net10.0/Toolkit.App.exe   # 运行验证
 
 - 每个功能/修复一个 commit，中文提交信息说清"做了什么+实测结果"；
 - 用户没说提交就不要提交，更不要 push；
-- 远程：github.com/ccqin/CCSystemToolkit（master）。仓库可见性建议保持 Private。
+- 远程：github.com/ccqin/CCSystemToolkit（master，**公开仓库**）。每次 push 触发 GitHub Actions 自动构建发布（自包含 zip 附到 Releases，tag 规则 v年.月.日.当日序号）。公开仓库注意：提交前不得引入个人路径/账号名/SID 等隐私（历史已有扫描惯例）。
 
 ## 已知坑（历史教训，别再踩）
 

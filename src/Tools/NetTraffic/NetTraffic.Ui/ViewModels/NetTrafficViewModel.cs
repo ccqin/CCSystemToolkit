@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Avalonia.Input.Platform;
 using CommunityToolkit.Mvvm.Input;
 using NetTraffic.Core.Models;
+using System.Diagnostics;
 using NetTraffic.Core.Services;
 using Toolkit.Shell;
 
@@ -26,6 +28,12 @@ public partial class NetTrafficViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _running;
+
+    /// <summary>右键菜单作用的选中行。</summary>
+    [ObservableProperty]
+    private ProcessTraffic? _selectedRow;
+
+    public Avalonia.Controls.Window? Owner { get; set; }
 
     [ObservableProperty]
     private string _totalDownText = "—";
@@ -111,6 +119,78 @@ public partial class NetTrafficViewModel : ObservableObject
         _monitor.ResetTotals();
         foreach (var row in Rows) { row.DownTotal = 0; row.UpTotal = 0; }
         AddLog("已清零会话累计流量。");
+    }
+
+    // ---------- 右键菜单 ----------
+
+    [RelayCommand]
+    private async Task ShowDetail()
+    {
+        if (SelectedRow is not { } row) return;
+        var detail = await Task.Run(() => ProcessDetailService.GetDetail(row.Pid, row.Name));
+        var conns = await Task.Run(() => ProcessDetailService.GetConnections(row.Pid));
+        if (Owner is not { } owner) return;
+        var win = new Views.TrafficDetailWindow
+        {
+            DataContext = new TrafficDetailViewModel(detail, row.DownTotalText, row.UpTotalText, conns),
+        };
+        await win.ShowDialog(owner);
+    }
+
+    [RelayCommand]
+    private void OpenFileLocation()
+    {
+        if (SelectedRow is not { } row) return;
+        try
+        {
+            var detail = ProcessDetailService.GetDetail(row.Pid, row.Name);
+            if (detail.Path is { } exe)
+            {
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{exe}\"") { UseShellExecute = true });
+            }
+        }
+        catch (Exception ex) { AddLog("✘ 打开文件位置失败：" + ex.Message); }
+    }
+
+    [RelayCommand]
+    private void WebSearch()
+    {
+        if (SelectedRow is not { } row) return;
+        try
+        {
+            var url = $"https://www.bing.com/search?q={Uri.EscapeDataString(row.Name + " 进程 是什么")}";
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private async Task CopyName()
+    {
+        if (SelectedRow is not { } row || Owner is not { } owner) return;
+        if (Avalonia.Controls.TopLevel.GetTopLevel(owner)?.Clipboard is { } clip)
+        {
+            await clip.SetTextAsync(row.Name);
+            StatusText = $"已复制进程名 {row.Name}";
+        }
+    }
+
+    [RelayCommand]
+    private void KillProcess()
+    {
+        if (SelectedRow is not { } row) return;
+        try
+        {
+            using var p = Process.GetProcessById(row.Pid);
+            p.Kill(entireProcessTree: true);
+            AddLog($"✔ 已结束进程 {row.Name}（PID {row.Pid}）。");
+            StatusText = $"已结束 {row.Name}（PID {row.Pid}）";
+        }
+        catch (Exception ex)
+        {
+            AddLog("✘ 结束失败：" + ex.Message);
+            StatusText = "结束失败：" + ex.Message;
+        }
     }
 
     [RelayCommand]

@@ -44,7 +44,23 @@
         <!-- 进程流量表 -->
         <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                  SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
                   AutomationProperties.AutomationId="grid-traffic" AutomationProperties.Name="进程流量表">
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="🔍 查看详细信息" Command="{Binding ShowDetailCommand}"
+                              AutomationProperties.AutomationId="menu-detail"/>
+                    <MenuItem Header="📂 打开文件位置" Command="{Binding OpenFileLocationCommand}"
+                              AutomationProperties.AutomationId="menu-openlocation"/>
+                    <MenuItem Header="🌐 网上搜索此进程" Command="{Binding WebSearchCommand}"
+                              AutomationProperties.AutomationId="menu-websearch"/>
+                    <MenuItem Header="⧉ 复制进程名" Command="{Binding CopyNameCommand}"
+                              AutomationProperties.AutomationId="menu-copyname"/>
+                    <Separator/>
+                    <MenuItem Header="✕ 结束进程" Command="{Binding KillProcessCommand}"
+                              AutomationProperties.AutomationId="menu-kill"/>
+                </ContextMenu>
+            </DataGrid.ContextMenu>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="进程" Binding="{Binding Name}" Width="1.6*"/>
                 <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70"/>

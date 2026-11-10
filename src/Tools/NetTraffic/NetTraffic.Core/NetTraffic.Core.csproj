@@ -10,6 +10,8 @@
   <ItemGroup>
     <!-- ETW（Microsoft-Windows-Kernel-Network / KernelTraceEventParser）：任务管理器“网络”同款实时归因机制 -->
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
+    <!-- 进程命令行查询（WMI） -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 
 </Project>

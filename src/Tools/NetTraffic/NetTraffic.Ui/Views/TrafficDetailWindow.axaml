@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NetTraffic.Ui.ViewModels"
+        x:Class="NetTraffic.Ui.Views.TrafficDetailWindow"
+        Title="进程详细信息"
+        Width="720" Height="560" CanResize="True"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+
+    <DockPanel Margin="16">
+        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,10">
+            <TextBlock Text="{Binding Detail.Name}" FontSize="18" FontWeight="Bold"/>
+            <TextBlock FontSize="12" Opacity="0.6">
+                <Run Text="PID "/><Run Text="{Binding Detail.Pid}"/>
+                <Run Text="  ·  ⬇ 会话累计 "/><Run Text="{Binding DownTotal}"/>
+                <Run Text="  ·  ⬆ 会话累计 "/><Run Text="{Binding UpTotal}"/>
+            </TextBlock>
+        </StackPanel>
+
+        <Border DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,0,10">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6" Margin="0,0,16,0" MinWidth="70">
+                    <TextBlock Text="路径" Classes="cardLabel"/>
+                    <TextBlock Text="公司" Classes="cardLabel"/>
+                    <TextBlock Text="描述" Classes="cardLabel"/>
+                    <TextBlock Text="版本" Classes="cardLabel"/>
+                    <TextBlock Text="启动时间" Classes="cardLabel"/>
+                    <TextBlock Text="命令行" Classes="cardLabel"/>
+                </StackPanel>
+                <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
+                    <TextBlock Text="{Binding Detail.Path, Converter={x:Static vm:Converters.NullToDash}}" TextWrapping="Wrap" Classes="mono" FontSize="11.5"/>
+                    <TextBlock Text="{Binding Detail.Company, Converter={x:Static vm:Converters.NullToDash}}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Detail.Description, Converter={x:Static vm:Converters.NullToDash}}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Detail.Version, Converter={x:Static vm:Converters.NullToDash}}"/>
+                    <TextBlock Text="{Binding Detail.StartTime, Converter={x:Static vm:Converters.StartTimeText}}"/>
+                    <TextBlock Text="{Binding Detail.CommandLine, Converter={x:Static vm:Converters.NullToDash}}" TextWrapping="Wrap" Classes="mono" FontSize="11"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <TextBlock DockPanel.Dock="Top" Text="TCP 连接（本地 → 远程 / 状态）" Classes="sectionTitle"/>
+        <DataGrid ItemsSource="{Binding Connections}" AutoGenerateColumns="False" IsReadOnly="True"
+                  GridLinesVisibility="Horizontal" MinHeight="100"
+                  AutomationProperties.AutomationId="grid-detail-conns" AutomationProperties.Name="连接详情">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="本地" Binding="{Binding Local}" Width="180"/>
+                <DataGridTextColumn Header="远程" Binding="{Binding Remote}" Width="200"/>
+                <DataGridTextColumn Header="状态" Binding="{Binding State}" Width="100"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

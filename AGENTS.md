@@ -41,7 +41,15 @@ SystemToolkit.sln
 | startupmgr | 🚀 开机启动项 | 10 类位置；禁用=StartupApproved（任务管理器同机制）；计划任务用 dahall/TaskScheduler NuGet（COM 通道——本机 TaskCache/Tasks 目录 ACL 锁死时依然可用）；服务=HKLM Services Start 值 |
 | plcscanner | 📡 PLC IP 扫描 | WinForms 项目迁移；ScanCore 原样保留；SendARP 多源地址探测；无引号含空格命令要逐段累积找真实文件（否则误判残留） |
 | nettraffic | 📶 流量监控 | 内核 ETW NETWORK_TCPIP（TraceEvent：kernel.TcpIpSend/Recv 等 8 个事件）按 PID 聚合，需管理员；右键详情=ProcessDetailService（WMI 命令行）+GetExtendedTcpTable 连接表 |
+| serialmcp | 🔌 串口 MCP | 手实现 streamable HTTP（HttpListener+JSON-RPC 2.0，仅回环+Origin 校验+令牌）；**DataReceived 在 com0com 下会触发丢失 → 读取走"事件+主动轮询驱动缓冲"双路径**；SerialMcpRuntime 单例跨视图存活；服务定义注册到 Shell 的 McpServiceRegistry，接入授权/端口记忆在 McpAccessStore |
 | logs | 📋 操作日志 | 内置工具（LogsToolModule 在宿主内），直接包 MainViewModel.Logs |
+
+## MCP 基础设施（工具暴露 MCP 能力的标准通道）
+
+- **注册**：工具 Core 实现模块类的 `static` 构造里 `McpServiceRegistry.Register(<IMcpServiceDefinition 实现>)`，顶栏「🔌 MCP 服务」弹窗（`McpSettingsWindow`）自动纳入管理：启停/端口记忆/接入链接展示，工具内也可自行提供快捷启停（同一运行时单例）。
+- **授权**：`McpAccessStore`（Shell）全局唯一——按"接入项=一个 AI 客户端"发 32 位令牌，接入 URL = 服务地址 + `?token=`；停用/删除立即失效（每次 HTTP 请求校验）；调用统计与最近使用持久化在 `%LOCALAPPDATA%\SystemToolkit\mcp-access.json`（含各服务记忆端口，首次使用自动建"默认接入"）。
+- **工具内打开设置弹窗**：`Host.ShowMcpSettings()`（IToolHost 扩展），不要自己 new 宿主窗口（工具不引用宿主）。
+- **协议实现要点**（照抄 McpServer）：POST /mcp 单端点；`initialize` 回显客户端请求的受支持协议版本；通知（`notifications/*`）回 **202 且显式设 StatusCode**（HttpListener 默认 200）；GET/DELETE 回 405（无会话/无服务端推送流）；错误分两层——协议错用 JSON-RPC error，工具执行错（串口未开等）用 result.isError=true 让 AI 可恢复。
 
 ## 宿主通用机制（做 UI 前先读）
 
@@ -82,3 +90,7 @@ src/Toolkit.App/bin/Release/net10.0/Toolkit.App.exe   # 运行验证
 4. SendARP/注册表命令解析：无引号但含空格的路径（`E:\Program Files (x86)\...`）必须逐段累积验证存在性；
 5. Windows 加固系统可能锁死 TaskCache 注册表/Tasks 目录 → 计划任务走 COM（TaskScheduler NuGet）；
 6. ETW 内核会话必须管理员；非管理员要给出明确引导（以管理员重启按钮）。
+7. **`SerialPort.DataReceived` 事件不可靠**（com0com 虚拟串口实测触发丢失：应答字节到达驱动缓冲后事件不上报）→ 串口等待/读取一律"事件 + 主动轮询驱动缓冲"双路径；读驱动缓冲只请求 `min(BytesToRead, buf)` 可用字节数（**不要请求大缓冲**，Read 会等凑满 count 直到超时）。
+8. PowerShell `SendKeys` 发中文进 UIA 定位的输入框不可靠（焦点不在目标框时内容丢失）→ 自动化填值用 UIA ValuePattern/`set`，不要 SendKeys。
+9. PowerShell 5.1 读 **UTF-8 无 BOM** 的 .ps1 中文会乱码 → 临时脚本输出用英文，或存 UTF-8 **带 BOM**。
+10. `dotnet sln add` 在本仓库嵌套解决方案文件夹（src/Tools/...）下会报"解决方案文件夹 src 已包含 Toolkit.Shell.csproj"而**静默失败** → 新项目手动编辑 sln（Project 条目 + ProjectConfigurationPlatforms 12 行 + NestedProjects 3 行，按现有格式抄 GUID）。

@@ -1,6 +1,6 @@
 # 系统管理工具集
 
-基于 **Avalonia 12 + .NET 10** 的 Windows 系统管理工具合集：卡片式主页 + 一个工具一个模块（ToolModule）。当前内置 **7 个工具 + 统一日志**：路由管理、权限医生、清理右键菜单、COM 扩展管理、开机启动项（含服务/计划任务）、PLC IP 扫描、流量监控。
+基于 **Avalonia 12 + .NET 10** 的 Windows 系统管理工具合集：卡片式主页 + 一个工具一个模块（ToolModule）。当前内置 **8 个工具 + 统一日志**：路由管理、权限医生、清理右键菜单、COM 扩展管理、开机启动项（含服务/计划任务）、PLC IP 扫描、流量监控、串口 MCP。
 
 > **开发者/AI 助手请先读 [AGENTS.md](AGENTS.md)**：架构约定、新增工具标准流程、构建验证纪律与历史踩坑清单。
 
@@ -15,6 +15,7 @@
 | 🚀 **开机启动项** | 两个 Tab 页。**🚀 启动项**：覆盖 **全部 10 类启动位置** —— 注册表 Run/RunOnce（HKCU/HKLM/32位）、组策略 Run、启动文件夹（用户/全局）、Winlogon（Userinit/Shell 追加监控位）、Active Setup、HKU\.DEFAULT·Run、**UWP 应用 StartupTask**（AppModel 状态读写，与系统设置同一存储）；禁用走系统 **StartupApproved**（与任务管理器互通、可逆）；Winlogon/ActiveSetup 只读防误改；残留检测（无引号含空格路径正确解析）；删除自动备份可还原；支持新增 HKCU·Run。**⚙ 服务**：全部用户态服务（Start 类型/账户/svchost 宿主 DLL/来源/残留），筛选 + 一键改启动类型（自动/手动/禁用，需管理员）。**📋 计划任务**：基于 [dahall/TaskScheduler](https://github.com/dahall/TaskScheduler)（COM 通道，加固系统锁死 TaskCache 注册表/Tasks 目录时依然可用），全部任务按触发器类型标注（登录=自启动置顶/开机/定时/事件/空闲/会话），上次/下次运行时间、来源、残留检测；筛选（登录触发/仅第三方/全部）+ 启用禁用开关 + 删除（系统任务需管理员）。 |
 | 📡 **PLC IP 扫描** | ARP 网段扫描发现设备（WinForms 版 PlcIpScanner 迁移）：网卡选择（★自动=全部在线网卡源地址池，多网卡同网段不漏设备）、网段解析（`192.168.1` / `192.168.1.0/24` / `192.168.1.10-60`，多段换行/分号）、SendARP 64 并发探测、自动清理失效 ARP 缓存、TCP 端口探测与识别（**102=西门子 S7 / 502=Modbus / 44818=EtherNet-IP / 21+23=★疑似 SC 设备**，金色标注）、**每行「🔍 探端口」按钮可改端口后补测**、进度条+剩余时间、隐藏本机结果、双击行复制 IP。 |
 | 📶 **流量监控** | 实时查看**哪个进程在下载/上传**（内核 ETW TCP+UDP 事件按进程归因，任务管理器同源机制）：按下载速率排序的进程表（速率/会话累计/TCP 连接数）、总速率与最活跃进程统计卡；**右键进程**：查看详细信息（路径/公司/版本/命令行 + 该进程全部 TCP 连接表：本地→远程/状态）、打开文件位置、网上搜索、复制进程名、结束进程树。需要管理员。 |
+| 🔌 **串口 MCP** | 内置 **MCP 服务器**（streamable HTTP，仅监听本机回环，需接入令牌），让 **AI 客户端通过标准 MCP 协议直接操作串口**：6 个工具（枚举串口含设备描述 / 打开（默认 115200 8N1）/ 关闭 / 收发（支持 `\r \n \t \xNN` 转义与 HEX，发送后等待应答）/ 读数据 / 状态）。卡片内**实时监控收发**：`AI→串口`、`串口→返回`、手动发送逐行着色显示，支持 HEX 显示切换、自动滚动、累计统计；支持**手动发送测试**（文本/HEX）。服务启停/端口/接入授权（令牌）在顶栏「🔌 MCP 服务」弹窗统一管理：按 AI 客户端生成可启停/吊销的令牌，一键复制含令牌的接入 URL，统计各客户端调用次数与最近使用。 |
 | 📋 **操作日志** | 以工具卡片形式进入的完整日志页：按级别（信息/成功/错误）与来源（各工具）筛选，实时统计“共 N 条 · ✔ · ✘”，一键清空；与状态栏“日志”Flyout 共用同一份数据。 |
 | 🧩 更多工具开发中 | 新工具以 ToolModule 模块接入（见下文）。 |
 | 🎨 **主页与主题** | 卡片背景自定义：⚙ 菜单（12 色色板/取色器/本地图片），默认绿底白字，配置持久化；状态栏**明暗主题循环切换**（跟随系统/浅色/深色，DynamicResource 即时刷新）；全局控件统一圆角、卡片阴影与悬停上浮动效。 |
@@ -48,19 +49,26 @@ dotnet run --project tools/RouteDump
 SystemToolkit.sln
 ├─ src/
 │  ├─ Toolkit.Shell/               # 工具集抽象层
-│  │  ├─ IToolHost.cs              #   宿主能力：IsElevated / StatusText / Log / ElevateRestart
+│  │  ├─ IToolHost.cs              #   宿主能力：IsElevated / StatusText / Log / ElevateRestart / ShowMcpSettings
 │  │  ├─ ToolModule.cs             #   工具模块基类：Id/Title/Glyph/Description/CreateView
-│  │  └─ ToolLog.cs                #   统一日志条目与级别
+│  │  ├─ ToolLog.cs                #   统一日志条目与级别
+│  │  └─ Mcp/                      #   MCP 基础设施（工具暴露 MCP 服务用）
+│  │     ├─ IMcpServiceDefinition.cs    # 服务定义接口（Id/端口/启停/状态变化事件）
+│  │     ├─ McpServiceRegistry.cs       # 静态注册表（工具注册，设置弹窗统一管理）
+│  │     └─ McpAccessStore.cs           # 接入授权（客户端令牌启停/吊销/调用统计）+ 端口记忆，
+│  │                                    # JSON 持久化 %LOCALAPPDATA%\SystemToolkit\mcp-access.json
 │  ├─ Toolkit.App/                 # 宿主应用（卡片式主页 + 工具切换 + 全局提权）
 │  │  ├─ App.axaml(.cs)            #   主题与全局样式（卡片/色板/设置按钮样式）；工具注册清单
-│  │  ├─ MainWindow.axaml(.cs)     #   顶部"返回主页"导航 + 底部全局状态栏（权限/提权/日志 Flyout）
+│  │  ├─ MainWindow.axaml(.cs)     #   顶部导航（返回主页 + 🔌 MCP 服务设置按钮）+ 底部全局状态栏
 │  │  ├─ ViewModels/MainViewModel.cs   # IToolHost 实现、卡片导航、提权重启、日志归集
 │  │  │                            #   ToolCardViewModel：卡片状态 + ⚙ 背景设置命令
 │  │  ├─ ViewModels/LogsViewModel.cs   # 操作日志页 VM：DataGridCollectionView 筛选 + 统计
+│  │  ├─ ViewModels/McpSettingsViewModel.cs  # 「MCP 服务」设置弹窗 VM（服务启停/端口 + 接入授权）
 │  │  ├─ Services/CardAppearanceStore.cs  # 卡片外观模型 + JSON 持久化 + 图片复制
 │  │  ├─ Tools/LogsToolModule.cs   #   操作日志工具模块（复用宿主日志集合）
 │  │  └─ Views/                    #   HomeView（卡片墙）、LogsView（日志页）、
-│  │                               #   LogListView（状态栏 Flyout 复用）、CardColorWindow（取色器）
+│  │                               #   LogListView（状态栏 Flyout 复用）、CardColorWindow（取色器）、
+│  │                               #   McpSettingsWindow（MCP 服务设置弹窗：服务/接入授权两 Tab）
 │  └─ Tools/NetRouteList/
 │     ├─ NetRouteList.Core/        # 路由核心库（无 UI 依赖）
 │     │  ├─ Native/IpHelperNative.cs   # P/Invoke：GetIpForwardTable2 / Create/DeleteIpForwardEntry2
@@ -115,6 +123,15 @@ SystemToolkit.sln
 │     │                                 #   ConnectionCounter（TCP 连接数）、
 │     │                                 #   ProcessDetailService（进程详情/WMI 命令行/连接表）
 │     └─ NetTraffic.Ui/            # 实时列表 + 统计卡 + 右键菜单 + 详情对话框
+│  └─ Tools/SerialMcpTool/         # 串口 MCP（AI 客户端经 MCP 协议收发串口 + 卡片实时监控）
+│     ├─ SerialMcpTool.Core/       # 串口核心（无 UI 依赖）
+│     │  ├─ SerialTraffic.cs           #   收发方向/条目模型 + 文本转义/HEX 解析工具
+│     │  ├─ SerialPortService.cs       #   串口封装：枚举(WMI 描述)/开关/收发/等待应答；
+│     │  │                             #   读取走「事件 + 主动轮询」双路径（不依赖 DataReceived 触发）
+│     │  ├─ McpServer.cs               #   streamable HTTP MCP 服务器（HttpListener + JSON-RPC 2.0 手实现，
+│     │  │                             #   仅本机回环 + Origin 校验 + 令牌校验；6 个串口工具）
+│     │  └─ SerialMcpRuntime.cs        #   进程级单例（跨视图存活）+ IMcpServiceDefinition 实现
+│     └─ SerialMcpTool.Ui/         # 串口设置 + MCP 状态条 + 收发监控列表 + 手动发送
 └─ tools/RouteDump/                # 命令行快照/自测工具（只依赖 Core）
 ```
 
@@ -149,6 +166,9 @@ SystemToolkit.sln
   | 开机启动项 | `tab-startup` / `tab-services` / `btn-scan` / `tb-search` / `grid-startups` / `switch-item` / `btn-delete` / `input-new-name` / `btn-add` / `combo-service-filter` / `grid-services` / `btn-svc-auto` / `btn-svc-manual` / `btn-svc-disable` / `panel-busy` / `tb-status` | 对应中文功能名 |
   | PLC IP 扫描 | `combo-nic` / `btn-refresh-nic` / `chk-virtual` / `input-ranges` / `btn-fill-ranges` / `chk-hidelocal` / `chk-ports` / `input-ports` / `btn-start` / `btn-stop` / `btn-clear` / `btn-probe`（行内探测）/ `grid-devices` / `tb-status` / `tb-eta` / `tb-found` / `tb-progress` | 对应中文功能名 |
   | 流量监控 | `btn-toggle` / `btn-reset` / `btn-elevate` / `grid-traffic` / `tb-status` / 右键菜单 `menu-detail` / `menu-openlocation` / `menu-websearch` / `menu-copyname` / `menu-kill` / 详情窗 `grid-detail-conns` | 对应中文功能名 |
+  | 顶栏（MCP） | `btn-mcpsettings` | MCP 服务设置 |
+  | 串口 MCP | `combo-serport` / `btn-refreshports` / `combo-baud` / `combo-databits` / `combo-parity` / `combo-stopbits` / `btn-openport` / `btn-closeport` / `tb-portstatus` / `tb-mcpstate` / `btn-mcpstart` / `btn-mcpstop` / `btn-copyurl` / `chk-hexmode` / `chk-autoscroll` / `btn-clearlog` / `list-serialtraffic` / `input-manualdata` / `btn-manualsend` / `btn-send` / `chk-manualhex` / `tb-stats` | 对应中文功能名（监控行 Name=显示内容） |
+  | MCP 设置弹窗 | `tabs-mcpsettings` / `tab-mcp-services` / `tab-mcp-access` / `input-svcport` / `btn-svcstart` / `btn-svcstop` / `btn-copysvcurl` / `btn-copyaccessurl` / `input-newaccess` / `btn-addaccess` / `list-accessitems` / `btn-copytoken` / `switch-access` / `btn-delaccess` / `tb-mcpmsg` | 对应中文功能名 |
   | 状态栏（主题） | `btn-theme` | 主题切换 |
 
   `GearIcon` 自定义控件示例了自定义 `AutomationPeer`（`GetNameCore() => "齿轮"`）。新增工具时建议同样为卡片内可交互控件设置 AutomationId。
@@ -159,6 +179,9 @@ SystemToolkit.sln
 - **主题切换**：状态栏按钮循环 `Application.RequestedThemeVariant`（跟随系统→浅色→深色），全部 `DynamicResource` 即时刷新；注意 Avalonia 12 的 `BoxShadowTransition` 已移除（悬停动效只用 `TransformOperationsTransition`），Transform 字符串须写 `translate(0px,-3px)`（带括号与单位）。
 - **菜单/扩展工具的禁用机制**：shell 命令项禁用 = HKCU 同路径写 `LegacyDisable`（HKCU 对 HKCR 的合并优先级高于 HKLM，普通权限可写、完全可逆）；shellex/COM 扩展禁用 = `HKCU\...\Shell Extensions\Blocked` 黑名单加 CLSID。扩展类禁用需资源管理器新进程生效 → 工具内提供一键重启。COM 扩展的菜单文字由 DLL 运行时生成（注册表搜不到），用 `LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE)` 纯数据映射 DLL 遍历字符串资源做启发式“疑似菜单文字”分析（不执行任何 DLL 代码）。
 - **提权是进程级操作**：由宿主 `MainViewModel.ElevateRestart()` 统一处理（`ElevationHelper.RestartElevated` 用 `Environment.ProcessPath` 重启当前 exe），工具内按钮仅转发到 `IToolHost.ElevateRestart()`。
+- **MCP 服务架构**：任何工具想暴露 MCP 能力，实现 `Toolkit.Shell.Mcp.IMcpServiceDefinition` 并注册到 `McpServiceRegistry`（静态构造注册即可），顶栏「🔌 MCP 服务」弹窗自动纳入管理（启停/端口/接入链接展示）。接入授权全局统一：`McpAccessStore` 按"接入项=一个 AI 客户端"生成 32 位随机令牌，客户端以 `服务URL?token=令牌` 接入；停用/删除后立即失效（令牌校验在每次 HTTP 请求时执行）。串口 MCP 服务器（`SerialMcpTool.Core`）为进程级单例运行时（`SerialMcpRuntime`），切换工具视图不中断；HTTP 传输为手实现 streamable HTTP（`HttpListener` + JSON-RPC 2.0，仅监听本机回环 + 浏览器 Origin 校验），通知回 202、GET/DELETE 回 405（无会话/无服务端推送流）。
+- **串口读取注意**：`SerialPort.DataReceived` 事件在某些驱动（如 com0com 虚拟串口）下存在触发丢失——串口服务的等待/读取路径均为「事件 + 主动轮询驱动缓冲」双路径（`ReadDriverIntoPending`：只读 `BytesToRead` 可用字节，不请求大缓冲凑满），实测应答在等待窗口内即时收到。
+- **MCP 接入数据持久化**：`%LOCALAPPDATA%\SystemToolkit\mcp-access.json`（接入项令牌/统计 + 各服务记忆端口）；首次使用自动创建"默认接入"项。
 - **对话框归属**：工具视图通过 `TopLevel.GetToplevel(this)` 取宿主主窗口作为 `ShowDialog` 的 Owner；`Dialogs.Owner` 静态单例在单窗口宿主下依然成立；宿主自己的对话框（取色器）走 `AppDialogs.Owner`。
 - **路由读取**：`GetIpForwardTable2`（P/Invoke），不受系统显示语言影响。注意 `MIB_IPFORWARD_ROW2` 实际 ABI（104 字节）与 MSDN 语法页字段顺序不一致：`Origin` 在实际内存布局中位于结构**末尾**。
 - **跃点语义**：`route print` 显示的跃点 = 接口跃点 + 路由跃点，界面显示总跃点并拆解说明。
@@ -176,4 +199,5 @@ SystemToolkit.sln
 - 卡片背景实测：⚙ Flyout 色板即时变色、取色器自定义色、本地图片背景均正常；重启后配置完整恢复；主题循环切换（跟随系统/浅色/深色）即时生效。
 - PLC IP 扫描实测：192.168.1.0/24 全段 254 地址 → 发现 19 台设备（IP/MAC 全部正确，含 00-30-1B 工控设备网段）；端口识别（S7/Modbus/EtherNet-IP/SC）与单行「🔍 探端口」补测实测通过（157/158/159 探出 23）。
 - 流量监控实测：管理员下内核 ETW 会话正常启动，进程实时速率列表正常显示（用户确认）；非管理员下明确拦截并引导提权；右键菜单五项（详情/文件位置/搜索/复制/结束）与详情对话框（含 TCP 连接表）已交付。
+- 串口 MCP 实测（com0com 虚拟串口对 COM4↔COM6 模拟设备）：MCP 协议全通——initialize（协议版本回显）/ tools/list（6 工具）/ tools/call 全部正常；无令牌与已删除令牌返回 401，通知返回 202；`open_serial_port` + `send_serial_data("AT\r\n")` → 设备收到 AT 并回 `+OK\r\n`，等待窗口内收到应答（转义文本 + HEX 双格式返回）；HEX 模式发送、无应答超时、串口未开报错（isError）、关闭/重开均验证；卡片监控列表实时显示 `AI→串口`/`串口→返回` 行与收发统计；「MCP 服务」弹窗服务启停/端口记忆/新增删除接入项/复制含令牌 URL 验证通过。
 - RouteDump 输出与本机 `route print` 一致（结构体 ABI 自检通过）。

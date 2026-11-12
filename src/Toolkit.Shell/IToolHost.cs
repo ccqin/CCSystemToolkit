@@ -23,4 +23,10 @@ public interface IToolHost
     /// 提权是进程级操作，必须由宿主统一处理。
     /// </summary>
     void ElevateRestart();
+
+    /// <summary>
+    /// 打开宿主「MCP 服务」设置弹窗（服务启停/端口、接入授权令牌管理）。
+    /// 工具内提供入口跳转，弹窗本身由宿主实现。
+    /// </summary>
+    void ShowMcpSettings();
 }

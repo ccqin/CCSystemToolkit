@@ -1,0 +1,190 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SerialMcpTool.Ui.ViewModels"
+             x:Class="SerialMcpTool.Ui.Views.SerialMcpView">
+
+    <UserControl.Styles>
+        <!-- 方向徽标底色（Tag 绑定方向名） -->
+        <Style Selector="Border.dirBadge">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="7,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Border.dirBadge[Tag=AiToPort]">
+            <Setter Property="Background" Value="#26107C10"/>
+        </Style>
+        <Style Selector="Border.dirBadge[Tag=ManualToPort]">
+            <Setter Property="Background" Value="#29B25E00"/>
+        </Style>
+        <Style Selector="Border.dirBadge[Tag=FromPort]">
+            <Setter Property="Background" Value="#260078D4"/>
+        </Style>
+        <Style Selector="Border.dirBadge[Tag=Info]">
+            <Setter Property="Background" Value="#266B6B6B"/>
+        </Style>
+        <Style Selector="Border.dirBadge[Tag=Error]">
+            <Setter Property="Background" Value="#26D13438"/>
+        </Style>
+        <!-- 内容着色（默认主题前景色；仅关键方向着色） -->
+        <Style Selector="TextBlock.msgText[Tag=AiToPort]">
+            <Setter Property="Foreground" Value="#107C10"/>
+        </Style>
+        <Style Selector="TextBlock.msgText[Tag=ManualToPort]">
+            <Setter Property="Foreground" Value="#B25E00"/>
+        </Style>
+        <Style Selector="TextBlock.msgText[Tag=FromPort]">
+            <Setter Property="Foreground" Value="#0078D4"/>
+        </Style>
+        <Style Selector="TextBlock.msgText[Tag=Error]">
+            <Setter Property="Foreground" Value="#D13438"/>
+        </Style>
+        <!-- MCP 服务状态着色 -->
+        <Style Selector="TextBlock.mcpState[Tag=Running]">
+            <Setter Property="Foreground" Value="#107C10"/>
+        </Style>
+        <Style Selector="TextBlock.mcpState[Tag=Stopped]">
+            <Setter Property="Foreground" Value="#8A8A8A"/>
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Margin="24,18">
+
+        <!-- 顶部：串口设置 + MCP 服务状态 -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="16,12" Margin="0,0,0,12">
+            <StackPanel Spacing="10">
+                <!-- 串口设置行 -->
+                <Grid ColumnDefinitions="Auto,110,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto"
+                      ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" Text="🔌 串口 MCP" FontSize="16" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding PortNames}" SelectedItem="{Binding SelectedPort}"
+                              HorizontalAlignment="Stretch"
+                              AutomationProperties.AutomationId="combo-serport" AutomationProperties.Name="串口选择">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" AutomationProperties.Name="{Binding}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Grid.Column="2" Content="↻ 刷新" Padding="10,5"
+                            Command="{Binding RefreshPortsCommand}"
+                            AutomationProperties.AutomationId="btn-refreshports" AutomationProperties.Name="刷新串口列表"/>
+                    <TextBlock Grid.Column="3" Text="波特率" VerticalAlignment="Center" Opacity="0.65"/>
+                    <ComboBox Grid.Column="4" ItemsSource="{x:Static vm:SerialMcpViewModel.BaudRates}"
+                              SelectedItem="{Binding BaudRate}" MinWidth="92"
+                              AutomationProperties.AutomationId="combo-baud" AutomationProperties.Name="波特率"/>
+                    <TextBlock Grid.Column="5" Text="数据位" VerticalAlignment="Center" Opacity="0.65"/>
+                    <ComboBox Grid.Column="6" ItemsSource="{x:Static vm:SerialMcpViewModel.DataBits}"
+                              SelectedIndex="{Binding DataBitsIndex}" Width="62"
+                              AutomationProperties.AutomationId="combo-databits" AutomationProperties.Name="数据位"/>
+                    <TextBlock Grid.Column="7" Text="校验" VerticalAlignment="Center" Opacity="0.65"/>
+                    <ComboBox Grid.Column="8" ItemsSource="{x:Static vm:SerialMcpViewModel.Parities}"
+                              SelectedIndex="{Binding ParityIndex}" Width="92"
+                              AutomationProperties.AutomationId="combo-parity" AutomationProperties.Name="校验位"/>
+                    <TextBlock Grid.Column="9" Text="停止位" VerticalAlignment="Center" Opacity="0.65"/>
+                    <ComboBox Grid.Column="10" ItemsSource="{x:Static vm:SerialMcpViewModel.StopBits}"
+                              SelectedIndex="{Binding StopBitsIndex}" Width="66"
+                              AutomationProperties.AutomationId="combo-stopbits" AutomationProperties.Name="停止位"/>
+                    <TextBlock Grid.Column="11" Text="{Binding PortStatusText}" VerticalAlignment="Center"
+                               Opacity="0.7" TextTrimming="CharacterEllipsis"
+                               AutomationProperties.AutomationId="tb-portstatus" AutomationProperties.Name="串口状态"/>
+                    <Button Grid.Column="12" Content="⏏ 打开串口" Classes="accent" Padding="12,5" MinWidth="92"
+                            Command="{Binding OpenPortCommand}" IsVisible="{Binding !PortOpen}"
+                            AutomationProperties.AutomationId="btn-openport" AutomationProperties.Name="打开串口"/>
+                    <Button Grid.Column="12" Content="⏹ 关闭串口" Padding="12,5" MinWidth="92"
+                            Command="{Binding ClosePortCommand}" IsVisible="{Binding PortOpen}"
+                            AutomationProperties.AutomationId="btn-closeport" AutomationProperties.Name="关闭串口"/>
+                    <Button Grid.Column="13" Content="手动发送" Classes="accent" Padding="12,5"
+                            Command="{Binding ManualSendCommand}"
+                            AutomationProperties.AutomationId="btn-manualsend" AutomationProperties.Name="手动发送"/>
+                </Grid>
+
+                <!-- MCP 服务状态行 -->
+                <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" Text="MCP 服务" VerticalAlignment="Center" Opacity="0.65"/>
+                    <TextBlock Grid.Column="1" Classes="mcpState" Tag="{Binding McpStateTag}"
+                               Text="{Binding McpStatusText}" FontWeight="SemiBold" VerticalAlignment="Center"
+                               AutomationProperties.AutomationId="tb-mcpstate" AutomationProperties.Name="MCP服务状态"/>
+                    <TextBlock Grid.Column="2" Classes="mono" Text="{Binding McpUrl}" Opacity="0.75"
+                               VerticalAlignment="Center" IsVisible="{Binding McpRunning}"/>
+                    <Button Grid.Column="4" Content="▶ 启动服务" Classes="accent" Padding="12,5"
+                            Command="{Binding StartMcpCommand}" IsVisible="{Binding !McpRunning}"
+                            AutomationProperties.AutomationId="btn-mcpstart" AutomationProperties.Name="启动MCP服务"/>
+                    <Button Grid.Column="5" Content="■ 停止服务" Padding="12,5"
+                            Command="{Binding StopMcpCommand}" IsVisible="{Binding McpRunning}"
+                            AutomationProperties.AutomationId="btn-mcpstop" AutomationProperties.Name="停止MCP服务"/>
+                    <Button Grid.Column="6" Content="复制地址" Padding="12,5"
+                            Command="{Binding CopyMcpUrlCommand}" IsVisible="{Binding McpRunning}"
+                            AutomationProperties.AutomationId="btn-copyurl" AutomationProperties.Name="复制服务地址"/>
+                    <Button Grid.Column="7" Content="⚙ 设置…" Padding="12,5"
+                            Command="{Binding OpenMcpSettingsCommand}"
+                            ToolTip.Tip="打开「MCP 服务」设置：服务启停/端口、AI 客户端接入授权（令牌）管理。"
+                            AutomationProperties.AutomationId="btn-mcpsettings" AutomationProperties.Name="MCP服务设置"/>
+                </Grid>
+
+                <!-- 说明 -->
+                <TextBlock Text="ℹ AI 客户端的接入 URL（含令牌）在顶栏「MCP 服务」设置中复制；串口可由本卡片打开，也可由 AI 调用 open_serial_port 打开。收发内容实时显示在下方监控列表。"
+                           Opacity="0.55" FontSize="12" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 底部：手动发送输入 -->
+        <Border DockPanel.Dock="Bottom" Classes="card" Padding="16,10" Margin="0,12,0,0">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" Text="手动发送" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding ManualHex}" Content="HEX"
+                              ToolTip.Tip="按十六进制发送（如 41 0D 0A）；关闭时按文本发送，支持 \r \n \t \xNN 转义。"
+                              AutomationProperties.AutomationId="chk-manualhex" AutomationProperties.Name="HEX发送"/>
+                <TextBox Grid.Column="2" Classes="mono" Text="{Binding ManualText}" Watermark="输入要发送的内容（文本模式支持 \r \n 转义，回车发送）"
+                         AutomationProperties.AutomationId="input-manualdata" AutomationProperties.Name="手动发送内容">
+                    <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding ManualSendCommand}"/>
+                    </TextBox.KeyBindings>
+                </TextBox>
+                <Button Grid.Column="3" Content="发送" Classes="accent" Padding="16,5"
+                        Command="{Binding ManualSendCommand}"
+                        AutomationProperties.AutomationId="btn-send" AutomationProperties.Name="发送"/>
+            </Grid>
+        </Border>
+
+        <!-- 主体：收发监控列表 -->
+        <Border Classes="card" Padding="10,8,10,10">
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="14"
+                      Margin="4,2,4,8">
+                    <TextBlock Grid.Column="0" Text="📋 收发监控" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding HexMode}" Content="HEX 显示"
+                                  ToolTip.Tip="切换监控列表的数据显示格式（转义文本 / 十六进制）。"
+                                  AutomationProperties.AutomationId="chk-hexmode" AutomationProperties.Name="HEX显示"/>
+                    <ToggleSwitch Grid.Column="2" IsChecked="{Binding AutoScroll}" Content="自动滚动"
+                                  AutomationProperties.AutomationId="chk-autoscroll" AutomationProperties.Name="自动滚动"/>
+                    <Button Grid.Column="3" Content="清空" Padding="12,4"
+                            Command="{Binding ClearLogCommand}"
+                            AutomationProperties.AutomationId="btn-clearlog" AutomationProperties.Name="清空监控"/>
+                    <TextBlock Grid.Column="5" Text="{Binding StatsText}" Opacity="0.6" VerticalAlignment="Center"
+                               AutomationProperties.AutomationId="tb-stats" AutomationProperties.Name="收发统计"/>
+                </Grid>
+
+                <TextBlock Text="暂无收发记录——启动 MCP 服务并让 AI 客户端连接，或直接打开串口手动发送。"
+                           Opacity="0.5" Margin="6,10" IsVisible="{Binding Items.Count, Converter={x:Static vm:Converters.CountIsZero}}"/>
+                <ListBox x:Name="LogList" ItemsSource="{Binding Items}"
+                         AutomationProperties.AutomationId="list-serialtraffic" AutomationProperties.Name="串口收发监控">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="2,2,4,2"
+                                        AutomationProperties.Name="{Binding DisplayText}">
+                                <TextBlock Text="{Binding TimeText}" Classes="mono" Opacity="0.5" FontSize="12"
+                                           VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                <Border Classes="dirBadge" Tag="{Binding Tag}">
+                                    <TextBlock Text="{Binding DirectionText}" FontSize="11.5" FontWeight="SemiBold"/>
+                                </Border>
+                                <TextBlock Classes="mono msgText" Tag="{Binding Tag}" Text="{Binding DisplayText}"
+                                           TextWrapping="Wrap" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+    </DockPanel>
+</UserControl>

@@ -254,6 +254,17 @@ public partial class MainViewModel : ObservableObject, IToolHost
         }
     }
 
+    /// <summary>打开「MCP 服务」设置弹窗（顶栏按钮与工具内入口共用）。</summary>
+    [RelayCommand]
+    private void ShowMcpSettings()
+    {
+        if (AppDialogs.Owner is not { } owner) return;
+        var win = new Views.McpSettingsWindow { DataContext = new McpSettingsViewModel() };
+        _ = win.ShowDialog(owner);
+    }
+
+    void IToolHost.ShowMcpSettings() => ShowMcpSettings();
+
     /// <summary>归集一条日志（IToolHost.Log 的实现，工具与宿主自身动作共用）。
     /// 消息以 ✔ / ✘ 开头自动识别为成功 / 失败级别。</summary>
     public void Log(string source, string message)

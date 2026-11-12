@@ -45,12 +45,15 @@
                 BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
                 Background="{DynamicResource LayerFillColorAltBrush}"
                 Padding="14,8">
-            <StackPanel Orientation="Horizontal" Spacing="14">
-                <Button Command="{Binding GoHomeCommand}" Content="← 返回主页" Padding="12,5"
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                <Button Grid.Column="0" Command="{Binding GoHomeCommand}" Content="← 返回主页" Padding="12,5"
                         IsVisible="{Binding !IsHome}"
                         ToolTip.Tip="返回工具集主页（工具内的未保存状态会丢失）。"/>
-                <TextBlock Text="{Binding HeaderTitle}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding HeaderTitle}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <Button Grid.Column="3" Content="🔌 MCP 服务" Command="{Binding ShowMcpSettingsCommand}" Padding="14,5"
+                        AutomationProperties.AutomationId="btn-mcpsettings" AutomationProperties.Name="MCP服务设置"
+                        ToolTip.Tip="MCP 服务管理：启动/停止服务、复制接入 URL、管理 AI 客户端接入授权（令牌）。"/>
+            </Grid>
         </Border>
 
         <!-- 内容区：主页卡片墙 / 工具界面 -->

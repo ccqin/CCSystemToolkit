@@ -5,6 +5,7 @@ using MenuClean.Ui;
 using NetRouteList.Ui;
 using NetTraffic.Ui;
 using PermDoctor.Ui;
+using SerialMcpTool.Ui;
 using ShellExt.Ui;
 using PlcScanner.Ui;
 using StartupMgr.Ui;
@@ -36,6 +37,7 @@ public partial class App : Application
                 new StartupMgrToolModule { Host = main },
                 new PlcScannerToolModule { Host = main },
                 new NetTrafficToolModule { Host = main },
+                new SerialMcpToolModule { Host = main },
                 new LogsToolModule(main) { Host = main },
                 // 未来工具在此追加……
             ], new HomeView { DataContext = main });

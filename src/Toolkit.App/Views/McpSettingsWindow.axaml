@@ -1,0 +1,151 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Toolkit.App.Views.McpSettingsWindow"
+        Title="MCP 服务"
+        Width="820" Height="680" MinWidth="660" MinHeight="500"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" CanResize="True">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.svcState[Tag=Running]">
+            <Setter Property="Foreground" Value="#107C10"/>
+        </Style>
+        <Style Selector="TextBlock.svcState[Tag=Stopped]">
+            <Setter Property="Foreground" Value="#8A8A8A"/>
+        </Style>
+        <Style Selector="Border.linkRow[Tag=Disabled]">
+            <Setter Property="Opacity" Value="0.45"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="18,14,18,10">
+        <TextBlock Grid.Row="0" Text="🔌 MCP 服务管理" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+        <TabControl Grid.Row="1" AutomationProperties.AutomationId="tabs-mcpsettings" AutomationProperties.Name="MCP服务设置页签">
+
+            <!-- ===== 服务 ===== -->
+            <TabItem Header="服务" AutomationProperties.AutomationId="tab-mcp-services">
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Services}" Margin="0,2,4,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Classes="card" Margin="0,0,0,10" Padding="14,12">
+                                    <StackPanel Spacing="8">
+                                        <!-- 名称/状态 + 端口 + 启停 -->
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontSize="14.5" FontWeight="SemiBold"/>
+                                                <TextBlock Classes="svcState" Tag="{Binding StateTag}" Text="{Binding StateText}"
+                                                           FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="端口" Opacity="0.65" VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="2" Width="88" Text="{Binding PortInput}"
+                                                     IsEnabled="{Binding !IsRunning}"
+                                                     ToolTip.Tip="服务监听端口（1-65535），运行中不可修改；修改后下次启动生效并记住。"
+                                                     AutomationProperties.AutomationId="input-svcport" AutomationProperties.Name="服务端口"/>
+                                            <Button Grid.Column="3" Content="▶ 启动" Classes="accent" Padding="14,5" MinWidth="76"
+                                                    Command="{Binding StartServiceCommand}" IsVisible="{Binding !IsRunning}"
+                                                    AutomationProperties.AutomationId="btn-svcstart" AutomationProperties.Name="启动服务"/>
+                                            <Button Grid.Column="4" Content="■ 停止" Padding="14,5" MinWidth="76"
+                                                    Command="{Binding StopServiceCommand}" IsVisible="{Binding IsRunning}"
+                                                    AutomationProperties.AutomationId="btn-svcstop" AutomationProperties.Name="停止服务"/>
+                                        </Grid>
+                                        <TextBlock Text="{Binding Description}" Opacity="0.6" FontSize="12" TextWrapping="Wrap"/>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8"
+                                              IsVisible="{Binding IsRunning}">
+                                            <TextBlock Grid.Column="0" Text="服务地址" Opacity="0.65" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Classes="mono" Text="{Binding EndpointUrl}"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <Button Grid.Column="2" Content="复制地址" Padding="10,4"
+                                                    Command="{Binding CopyServiceUrlCommand}"
+                                                    ToolTip.Tip="复制不含令牌的服务地址（接入需令牌，见下方接入链接）。"
+                                                    AutomationProperties.AutomationId="btn-copysvcurl" AutomationProperties.Name="复制服务地址"/>
+                                        </Grid>
+                                        <TextBlock Text="{Binding TotalCalls, StringFormat='本次运行期间工具调用 {0} 次'}"
+                                                   Opacity="0.6" FontSize="12"/>
+
+                                        <Separator/>
+
+                                        <TextBlock Text="接入链接（含令牌，复制给你的 AI 客户端配置）" FontWeight="SemiBold" FontSize="12.5"/>
+                                        <TextBlock Text="尚无接入项——到「接入授权」页新增一个，再回来复制接入 URL。"
+                                                   Opacity="0.55" FontSize="12" IsVisible="{Binding NoAccessLinks}"/>
+                                        <ItemsControl ItemsSource="{Binding AccessLinks}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" Margin="0,0,0,6">
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12.5"/>
+                                                            <TextBlock Text="{Binding EnabledText}" FontSize="11.5" Foreground="#D13438"/>
+                                                        </StackPanel>
+                                                        <Border Grid.Column="1" Classes="linkRow" Tag="{Binding EnabledTag}">
+                                                            <TextBlock Classes="mono" Text="{Binding Url}" Opacity="0.8" FontSize="12"
+                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                       AutomationProperties.Name="{Binding Url}"/>
+                                                        </Border>
+                                                        <Button Grid.Column="3" Content="复制接入 URL" Padding="10,4"
+                                                                Command="{Binding CopyUrlCommand}"
+                                                                AutomationProperties.AutomationId="btn-copyaccessurl" AutomationProperties.Name="复制接入URL"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ===== 接入授权 ===== -->
+            <TabItem Header="接入授权" AutomationProperties.AutomationId="tab-mcp-access">
+                <DockPanel Margin="0,10,0,0">
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Top">
+                            <TextBox Width="260" Text="{Binding NewAccessName}" Watermark="AI 客户端名称，如 ZCode / Claude"
+                                     AutomationProperties.AutomationId="input-newaccess" AutomationProperties.Name="新接入名称">
+                                <TextBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding AddAccessCommand}"/>
+                                </TextBox.KeyBindings>
+                            </TextBox>
+                            <Button Content="＋ 新增接入" Classes="accent" Padding="14,5"
+                                    Command="{Binding AddAccessCommand}"
+                                    AutomationProperties.AutomationId="btn-addaccess" AutomationProperties.Name="新增接入"/>
+                        </StackPanel>
+                        <TextBlock Text="ℹ 每个 AI 客户端一个接入项：接入 URL = 服务地址 + ?token=令牌。停用或删除后该客户端立即失效；同一令牌可访问所有已启动的 MCP 服务。"
+                                   Opacity="0.55" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    </DockPanel>
+
+                    <ListBox ItemsSource="{Binding AccessItems}"
+                             AutomationProperties.AutomationId="list-accessitems" AutomationProperties.Name="接入授权列表">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="1.1*,1.4*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" Margin="2,3"
+                                      AutomationProperties.Name="{Binding Name}">
+                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Classes="mono" Text="{Binding Token}" Opacity="0.75"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <Button Grid.Column="2" Content="复制令牌" Padding="10,4"
+                                            Command="{Binding $parent[Window].DataContext.CopyTokenCommand}" CommandParameter="{Binding .}"
+                                            AutomationProperties.AutomationId="btn-copytoken" AutomationProperties.Name="复制令牌"/>
+                                    <ToggleSwitch Grid.Column="3" IsChecked="{Binding Enabled}"
+                                                  AutomationProperties.AutomationId="switch-access" AutomationProperties.Name="{Binding Name}"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding LastUsedText}" Opacity="0.6" FontSize="12"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="5" Text="{Binding CallCount, StringFormat='调用 {0} 次'}" Opacity="0.6"
+                                               FontSize="12" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="6" Content="✕" Padding="10,4"
+                                            Command="{Binding $parent[Window].DataContext.RemoveAccessCommand}" CommandParameter="{Binding .}"
+                                            ToolTip.Tip="删除该接入项，其令牌立即失效。"
+                                            AutomationProperties.AutomationId="btn-delaccess" AutomationProperties.Name="删除接入"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+
+        <TextBlock Grid.Row="2" Text="{Binding Message}" Opacity="0.75" Margin="2,10,0,0" TextWrapping="Wrap"
+                   AutomationProperties.AutomationId="tb-mcpmsg" AutomationProperties.Name="MCP设置提示"/>
+    </Grid>
+</Window>

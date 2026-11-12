@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 串口访问（net10.0 目标下类型转发，需显式引用） -->
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+    <!-- WMI 查询串口设备描述（Win32_SerialPort） -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Toolkit.Shell\Toolkit.Shell.csproj" />
+  </ItemGroup>
+
+</Project>

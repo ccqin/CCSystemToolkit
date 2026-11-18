@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Text;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Data.Converters;
 using Avalonia.Input.Platform;
@@ -7,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SerialMcpTool.Core;
 using Toolkit.Shell;
+using Toolkit.Shell.Mcp;
 
 namespace SerialMcpTool.Ui.ViewModels;
 
@@ -34,6 +37,7 @@ public partial class SerialItemViewModel : ObservableObject
         SerialDirection.ManualToPort => "手动→串口",
         SerialDirection.FromPort => "串口→返回",
         SerialDirection.Info => "系统",
+        SerialDirection.AiCall => "AI调用",
         SerialDirection.Error => "错误",
         _ => "",
     };
@@ -68,6 +72,7 @@ public partial class SerialMcpViewModel : ObservableObject
     public SerialMcpViewModel(IToolHost host)
     {
         _host = host;
+        FilteredItems = new DataGridCollectionView(Items) { Filter = FilterItem };
         foreach (var item in _rt.Snapshot())
             Items.Add(new SerialItemViewModel { Model = item });
         RefreshItems();
@@ -75,7 +80,49 @@ public partial class SerialMcpViewModel : ObservableObject
         RefreshStatus();
         _rt.Traffic += OnTraffic;
         _rt.StateChanged += OnStateChanged;
+        McpGatewayRuntime.Instance.StateChanged += OnStateChanged;
     }
+
+    partial void OnFilterAllChanged(bool value)
+    {
+        if (_syncingFilters) return;
+        _syncingFilters = true;
+        FilterFromPort = FilterAiToPort = FilterAiCall = FilterManualToPort = FilterInfo = FilterError = value;
+        _syncingFilters = false;
+        FilteredItems.Refresh();
+    }
+
+    partial void OnFilterFromPortChanged(bool value) => FilterFlagChanged();
+    partial void OnFilterAiToPortChanged(bool value) => FilterFlagChanged();
+    partial void OnFilterAiCallChanged(bool value) => FilterFlagChanged();
+    partial void OnFilterManualToPortChanged(bool value) => FilterFlagChanged();
+    partial void OnFilterInfoChanged(bool value) => FilterFlagChanged();
+    partial void OnFilterErrorChanged(bool value) => FilterFlagChanged();
+
+    private void FilterFlagChanged()
+    {
+        if (_syncingFilters) return;
+        // 六个方向全勾时"全部"自动勾上；否则去掉（避免"全部"与其余勾选状态矛盾）
+        var all = FilterFromPort && FilterAiToPort && FilterAiCall && FilterManualToPort && FilterInfo && FilterError;
+        if (FilterAll != all)
+        {
+            _syncingFilters = true;
+            FilterAll = all;
+            _syncingFilters = false;
+        }
+        FilteredItems.Refresh();
+    }
+
+    private bool FilterItem(object obj) => obj is not SerialItemViewModel vm || vm.Model.Direction switch
+    {
+        SerialDirection.FromPort => FilterFromPort,
+        SerialDirection.AiToPort => FilterAiToPort,
+        SerialDirection.AiCall => FilterAiCall,
+        SerialDirection.ManualToPort => FilterManualToPort,
+        SerialDirection.Info => FilterInfo,
+        SerialDirection.Error => FilterError,
+        _ => true,
+    };
 
     /// <summary>视图脱离时退订（运行时仍在后台运行）。</summary>
     public void Detach()
@@ -84,6 +131,7 @@ public partial class SerialMcpViewModel : ObservableObject
         _detached = true;
         _rt.Traffic -= OnTraffic;
         _rt.StateChanged -= OnStateChanged;
+        McpGatewayRuntime.Instance.StateChanged -= OnStateChanged;
     }
 
     // ===== 串口设置 =====
@@ -92,9 +140,21 @@ public partial class SerialMcpViewModel : ObservableObject
 
     [ObservableProperty] private string? _selectedPort;
     [ObservableProperty] private int _baudRate = 115200;
+
+    /// <summary>波特率输入（可从常用列表选，也可手动输入任意值；合法整数时同步到 BaudRate）。</summary>
+    [ObservableProperty] private string _baudRateText = "115200";
+
+    partial void OnBaudRateTextChanged(string value)
+    {
+        if (int.TryParse(value?.Trim(), out var b) && b is > 0 and <= 10_000_000)
+            BaudRate = b;
+    }
     [ObservableProperty] private int _dataBitsIndex = 1;   // 默认 8
     [ObservableProperty] private int _parityIndex;
     [ObservableProperty] private int _stopBitsIndex;
+
+    /// <summary>行历史保留条数（0 = 全部缓存；打开串口时生效）。</summary>
+    [ObservableProperty] private string _historyInput = "0";
 
     [ObservableProperty] private bool _portOpen;
     [ObservableProperty] private string _portStatusText = "串口未打开";
@@ -112,6 +172,12 @@ public partial class SerialMcpViewModel : ObservableObject
 
     public ObservableCollection<SerialItemViewModel> Items { get; } = [];
 
+    /// <summary>过滤后的监控视图（方向标签勾选过滤，列表绑定这个）。</summary>
+    public DataGridCollectionView FilteredItems { get; }
+
+    /// <summary>列表多选（SelectionMode=Multiple,Toggle 绑定）。</summary>
+    public ObservableCollection<SerialItemViewModel> SelectedItems { get; } = [];
+
     [ObservableProperty] private bool _hexMode;
     [ObservableProperty] private bool _autoScroll = true;
     [ObservableProperty] private string _statsText = "↑ 0 字节  ↓ 0 字节 · 0 条";
@@ -119,10 +185,25 @@ public partial class SerialMcpViewModel : ObservableObject
     /// <summary>新条目加入时触发（视图滚动到底部用）。</summary>
     public event Action<SerialItemViewModel>? ItemAdded;
 
+    // ===== 方向过滤标签（默认全选=全部显示；只勾某几个则只显示对应方向） =====
+
+    [ObservableProperty] private bool _filterAll = true;
+    [ObservableProperty] private bool _filterFromPort = true;
+    [ObservableProperty] private bool _filterAiToPort = true;
+    [ObservableProperty] private bool _filterAiCall = true;
+    [ObservableProperty] private bool _filterManualToPort = true;
+    [ObservableProperty] private bool _filterInfo = true;
+    [ObservableProperty] private bool _filterError = true;
+
+    private bool _syncingFilters;
+
     // ===== 手动测试 =====
 
     [ObservableProperty] private string _manualText = "";
     [ObservableProperty] private bool _manualHex;
+
+    /// <summary>文本模式发送末尾自动附加 \r\n（多数设备/终端需要换行才应答）；HEX 模式不附加。</summary>
+    [ObservableProperty] private bool _appendNewline = true;
 
     partial void OnHexModeChanged(bool value) => RefreshItems();
 
@@ -145,6 +226,7 @@ public partial class SerialMcpViewModel : ObservableObject
             _host.Log(SerialMcpToolModule.ToolTitle, "△ 请先选择串口（本机未检测到串口时点击「刷新」）");
             return;
         }
+        var history = int.TryParse(HistoryInput, out var h) && h >= 0 ? h : 0;
         try
         {
             _rt.Serial.Open(port, BaudRate, DataBits[DataBitsIndex],
@@ -159,7 +241,7 @@ public partial class SerialMcpViewModel : ObservableObject
                     1 => System.IO.Ports.StopBits.OnePointFive,
                     2 => System.IO.Ports.StopBits.Two,
                     _ => System.IO.Ports.StopBits.One,
-                });
+                }, history);
             _host.Log(SerialMcpToolModule.ToolTitle, $"✔ 已打开串口 {port} @ {BaudRate}");
         }
         catch (Exception ex)
@@ -188,8 +270,9 @@ public partial class SerialMcpViewModel : ObservableObject
     {
         try
         {
-            _rt.Start(0);   // 0 = 用记忆端口/默认端口
-            _host.Log(SerialMcpToolModule.ToolTitle, $"✔ MCP 服务器已启动：{_rt.EndpointUrl}");
+            McpGatewayRuntime.Instance.Start();   // 聚合网关：单端口暴露全部已启用能力
+            _rt.SetEnabled(true);
+            _host.Log(SerialMcpToolModule.ToolTitle, $"✔ MCP 网关已启动：{McpGatewayRuntime.Instance.EndpointUrl}（串口工具已启用）");
         }
         catch (Exception ex)
         {
@@ -202,8 +285,8 @@ public partial class SerialMcpViewModel : ObservableObject
     [RelayCommand]
     private void StopMcp()
     {
-        _rt.Stop();
-        _host.Log(SerialMcpToolModule.ToolTitle, "MCP 服务器已停止");
+        _rt.SetEnabled(false);
+        _host.Log(SerialMcpToolModule.ToolTitle, "串口 MCP 工具已停用（网关与其他工具不受影响，整体启停在顶栏「MCP 服务」）");
         RefreshStatus();
     }
 
@@ -213,16 +296,16 @@ public partial class SerialMcpViewModel : ObservableObject
     [RelayCommand]
     private async Task CopyMcpUrl()
     {
-        if (!_rt.IsRunning)
+        if (!McpGatewayRuntime.Instance.IsRunning)
         {
-            _host.Log(SerialMcpToolModule.ToolTitle, "△ MCP 服务未启动，先点击「启动服务」");
+            _host.Log(SerialMcpToolModule.ToolTitle, "△ MCP 网关未启动，先点击「启动服务」");
             return;
         }
         if (Owner is not { } owner) return;
         if (TopLevel.GetTopLevel(owner)?.Clipboard is { } clip)
         {
-            await clip.SetTextAsync(_rt.EndpointUrl);
-            _host.Log(SerialMcpToolModule.ToolTitle, "已复制服务地址（不含令牌；含令牌的接入 URL 在顶栏「MCP 服务」中复制）");
+            await clip.SetTextAsync(McpGatewayRuntime.Instance.EndpointUrl);
+            _host.Log(SerialMcpToolModule.ToolTitle, "已复制网关地址（不含令牌；含令牌的接入 URL 在顶栏「MCP 服务」中复制）");
         }
     }
 
@@ -234,6 +317,42 @@ public partial class SerialMcpViewModel : ObservableObject
         RefreshStatus();
     }
 
+    /// <summary>复制全部监控记录（时间 + 方向 + 内容，制表符分隔）——方便整段发给 AI 或存档分析。</summary>
+    [RelayCommand]
+    private async Task CopyAllLog()
+    {
+        if (Items.Count == 0)
+        {
+            _host.Log(SerialMcpToolModule.ToolTitle, "△ 监控列表为空，没有可复制的内容");
+            return;
+        }
+        if (Owner is not { } owner) return;
+        if (TopLevel.GetTopLevel(owner)?.Clipboard is not { } clip) return;
+        var sb = new StringBuilder();
+        foreach (var item in Items)
+            sb.Append(item.TimeText).Append('\t').Append(item.DirectionText).Append('\t').AppendLine(item.DisplayText);
+        await clip.SetTextAsync(sb.ToString());
+        _host.Log(SerialMcpToolModule.ToolTitle, $"✔ 已复制 {Items.Count} 条监控记录");
+    }
+
+    /// <summary>复制选中的监控行（列表可多选：Ctrl 点选 / 点选切换）。</summary>
+    [RelayCommand]
+    private async Task CopySelected()
+    {
+        if (SelectedItems.Count == 0)
+        {
+            _host.Log(SerialMcpToolModule.ToolTitle, "△ 没有选中的行（Ctrl 点选或直接点选多行后再右键复制）");
+            return;
+        }
+        if (Owner is not { } owner) return;
+        if (TopLevel.GetTopLevel(owner)?.Clipboard is not { } clip) return;
+        var sb = new StringBuilder();
+        foreach (var item in SelectedItems)
+            sb.Append(item.TimeText).Append('\t').Append(item.DirectionText).Append('\t').AppendLine(item.DisplayText);
+        await clip.SetTextAsync(sb.ToString());
+        _host.Log(SerialMcpToolModule.ToolTitle, $"✔ 已复制 {SelectedItems.Count} 条选中记录");
+    }
+
     [RelayCommand]
     private void ManualSend()
     {
@@ -241,7 +360,22 @@ public partial class SerialMcpViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(text)) return;
         try
         {
-            var bytes = ManualHex ? SerialText.HexToBytes(text) : SerialText.UnescapeText(text);
+            byte[] bytes;
+            if (ManualHex)
+            {
+                bytes = SerialText.HexToBytes(text);
+            }
+            else
+            {
+                // 附加回车：末尾已带换行（真实字符或显式转义）时不重复附加
+                if (AppendNewline
+                    && !text.EndsWith('\r') && !text.EndsWith('\n')
+                    && !text.EndsWith("\\r") && !text.EndsWith("\\n"))
+                {
+                    text += "\\r\\n";
+                }
+                bytes = SerialText.UnescapeText(text);
+            }
             if (bytes.Length == 0)
             {
                 _host.Log(SerialMcpToolModule.ToolTitle, "△ 手动发送内容为空");
@@ -290,9 +424,10 @@ public partial class SerialMcpViewModel : ObservableObject
         PortStatusText = serial.IsOpen
             ? $"已打开 {serial.PortName} @ {serial.BaudRate}（{serial.SettingsText}）"
             : "串口未打开";
-        McpRunning = _rt.IsRunning;
-        McpStatusText = _rt.IsRunning ? "运行中" : "未启动";
-        McpUrl = _rt.IsRunning ? _rt.EndpointUrl : "";
+        var gateway = McpGatewayRuntime.Instance;
+        McpRunning = gateway.IsRunning && _rt.Enabled;
+        McpStatusText = !gateway.IsRunning ? "未启动" : _rt.Enabled ? "运行中" : "已停用";
+        McpUrl = gateway.IsRunning ? gateway.EndpointUrl : "";
         OnPropertyChanged(nameof(McpStateTag));
         StatsText = $"↑ 已发送 {serial.TotalSent} 字节  ↓ 已接收 {serial.TotalReceived} 字节 · {Items.Count} 条";
     }

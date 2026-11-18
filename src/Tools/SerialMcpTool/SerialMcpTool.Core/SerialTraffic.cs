@@ -14,8 +14,11 @@ public enum SerialDirection
     /// <summary>串口返回的数据。</summary>
     FromPort,
 
-    /// <summary>系统提示（打开/关闭串口、服务器启停、AI 调用记录等）。</summary>
+    /// <summary>系统提示（打开/关闭串口、服务器启停等）。</summary>
     Info,
+
+    /// <summary>AI 调用记录（每次 tools/call 的参数摘要与结果）。</summary>
+    AiCall,
 
     /// <summary>错误提示。</summary>
     Error,

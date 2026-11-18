@@ -1,0 +1,268 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FileTransferTool.Ui.ViewModels"
+             x:Class="FileTransferTool.Ui.Views.FileTransferView">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.mcpState[Tag=Running]">
+            <Setter Property="Foreground" Value="#107C10"/>
+        </Style>
+        <Style Selector="TextBlock.mcpState[Tag=Stopped]">
+            <Setter Property="Foreground" Value="#8A8A8A"/>
+        </Style>
+        <!-- 记录类别徽标与内容着色（Tag 绑定 Kind） -->
+        <Style Selector="Border.kindBadge">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="7,2"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+        </Style>
+        <Style Selector="Border.kindBadge[Tag=Done]">
+            <Setter Property="Background" Value="#26107C10"/>
+        </Style>
+        <Style Selector="Border.kindBadge[Tag=Error]">
+            <Setter Property="Background" Value="#26D13438"/>
+        </Style>
+        <Style Selector="Border.kindBadge[Tag=AiCall]">
+            <Setter Property="Background" Value="#336B69D6"/>
+        </Style>
+        <Style Selector="Border.kindBadge[Tag=Info]">
+            <Setter Property="Background" Value="#266B6B6B"/>
+        </Style>
+        <Style Selector="TextBlock.recText[Tag=Error]">
+            <Setter Property="Foreground" Value="#D13438"/>
+        </Style>
+        <Style Selector="TextBlock.recText[Tag=Done]">
+            <Setter Property="Foreground" Value="#107C10"/>
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Margin="24,18">
+
+        <!-- 顶部：标题 + MCP 服务状态 -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="16,10" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="10">
+                <TextBlock Grid.Column="0" Text="📤 文件传输" FontSize="16" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="0,0,14,0"/>
+                <TextBlock Grid.Column="1" Text="MCP 服务" VerticalAlignment="Center" Opacity="0.65"/>
+                <TextBlock Grid.Column="2" Classes="mcpState" Tag="{Binding McpStateTag}"
+                           Text="{Binding McpStatusText}" FontWeight="SemiBold" VerticalAlignment="Center"
+                           AutomationProperties.AutomationId="tb-mcpstate" AutomationProperties.Name="MCP服务状态"/>
+                <TextBlock Grid.Column="3" Classes="mono" Text="{Binding McpUrl}" Opacity="0.75" VerticalAlignment="Center"/>
+                <Button Grid.Column="4" Content="▶ 启动服务" Classes="accent" Padding="12,5"
+                        Command="{Binding StartMcpCommand}" IsVisible="{Binding !McpRunning}"
+                        AutomationProperties.AutomationId="btn-mcpstart" AutomationProperties.Name="启动MCP服务"/>
+                <Button Grid.Column="5" Content="■ 停用工具" Padding="12,5"
+                        Command="{Binding StopMcpCommand}" IsVisible="{Binding McpRunning}"
+                        AutomationProperties.AutomationId="btn-mcpstop" AutomationProperties.Name="停用工具"/>
+                <Button Grid.Column="6" Content="⚙ 设置…" Padding="12,5"
+                        Command="{Binding OpenMcpSettingsCommand}"
+                        ToolTip.Tip="打开「MCP 服务」设置：网关启停/端口、AI 客户端接入授权（令牌）管理。"
+                        AutomationProperties.AutomationId="btn-mcpsettings" AutomationProperties.Name="MCP服务设置"/>
+            </Grid>
+        </Border>
+
+        <TabControl AutomationProperties.AutomationId="tabs-transfer" AutomationProperties.Name="传输页签">
+
+            <!-- ===== 站点与传输 ===== -->
+            <TabItem Header="📦 站点与传输" AutomationProperties.AutomationId="tab-sites">
+                <DockPanel Margin="0,10,0,0">
+                    <Border DockPanel.Dock="Top" Classes="card" Padding="12,8" Margin="0,0,0,10">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                <TextBlock Text="站点（协议在添加/编辑时选择：FTP / SFTP / SCP）" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Content="＋ 新增站点" Classes="accent" Padding="12,4"
+                                        Command="{Binding AddSiteCommand}"
+                                        AutomationProperties.AutomationId="btn-addsite" AutomationProperties.Name="新增站点"/>
+                                <Button Grid.Column="2" Content="↻" Padding="10,4" Margin="8,0,0,0"
+                                        Command="{Binding RefreshSitesCommand}"
+                                        ToolTip.Tip="从存储重新加载站点列表。"
+                                        AutomationProperties.AutomationId="btn-refreshsites" AutomationProperties.Name="刷新站点"/>
+                            </Grid>
+                            <DataGrid ItemsSource="{Binding Sites}" SelectedItem="{Binding SiteSel}"
+                                      AutoGenerateColumns="False" IsReadOnly="True" MinHeight="130" MaxHeight="300"
+                                      GridLinesVisibility="Horizontal"
+                                      AutomationProperties.AutomationId="grid-sites" AutomationProperties.Name="站点表">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="1.2*"/>
+                                    <DataGridTextColumn Header="协议" Binding="{Binding ProtocolText}" Width="70"/>
+                                    <DataGridTextColumn Header="主机:端口" Binding="{Binding HostText}" Width="1.4*"/>
+                                    <DataGridTextColumn Header="用户" Binding="{Binding Username}" Width="1*"/>
+                                    <DataGridTextColumn Header="认证" Binding="{Binding AuthText}" Width="0.8*"/>
+                                    <DataGridTemplateColumn Header="操作" Width="130">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Button Content="编辑" FontSize="12" Padding="8,2"
+                                                            Command="{Binding $parent[UserControl].DataContext.EditSiteCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            AutomationProperties.AutomationId="btn-editsite" AutomationProperties.Name="编辑站点"/>
+                                                    <Button Content="删除" FontSize="12" Padding="8,2"
+                                                            Command="{Binding $parent[UserControl].DataContext.RemoveSiteCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            AutomationProperties.AutomationId="btn-delsite" AutomationProperties.Name="删除站点"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card" Padding="12,10">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="手动传输（协议跟站点走）" FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="Auto,260,Auto,170,*,Auto" ColumnSpacing="8">
+                                <TextBlock Grid.Column="0" Text="站点" VerticalAlignment="Center" Opacity="0.65"/>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding Sites}" SelectedItem="{Binding SiteSel}"
+                                          AutomationProperties.AutomationId="combo-site" AutomationProperties.Name="站点选择">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock>
+                                                <Run Text="{Binding ProtocolText}"/><Run Text=" · "/><Run Text="{Binding Name}"/>
+                                                <Run Text=" (" Foreground="Gray"/><Run Text="{Binding HostText}" Foreground="Gray"/><Run Text=")" Foreground="Gray"/>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Grid.Column="2" Text="方向" VerticalAlignment="Center" Opacity="0.65"/>
+                                <ComboBox Grid.Column="3" ItemsSource="{x:Static vm:FileTransferViewModel.Directions}"
+                                          SelectedIndex="{Binding DirIndex}"
+                                          AutomationProperties.AutomationId="combo-dir" AutomationProperties.Name="传输方向"/>
+                                <Button Grid.Column="5" Content="⇅ 传输" Classes="accent" Padding="16,5"
+                                        Command="{Binding ManualTransferCommand}"
+                                        AutomationProperties.AutomationId="btn-transfer" AutomationProperties.Name="传输"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
+                                <TextBlock Grid.Column="0" Text="本地" VerticalAlignment="Center" Opacity="0.65"/>
+                                <TextBox Grid.Column="1" Classes="mono" Text="{Binding LocalPath}" Watermark="本地文件绝对路径（上传的源 / 下载的目标）"
+                                         AutomationProperties.AutomationId="input-local" AutomationProperties.Name="本地路径"/>
+                                <TextBlock Grid.Column="2" Text="远程" VerticalAlignment="Center" Opacity="0.65"/>
+                                <TextBox Grid.Column="3" Classes="mono" Text="{Binding RemotePath}" Watermark="远程路径（如 /root/app.bin；上传 SFTP 自动建目录）"
+                                         AutomationProperties.AutomationId="input-remote" AutomationProperties.Name="远程路径"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ===== 远程浏览 ===== -->
+            <TabItem Header="📁 远程浏览" AutomationProperties.AutomationId="tab-browse">
+                <Border Classes="card" Padding="12,10" Margin="0,10,0,0">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,240,Auto,*,Auto,Auto,Auto" ColumnSpacing="8"
+                              Margin="0,0,0,8">
+                            <TextBlock Grid.Column="0" Text="站点" VerticalAlignment="Center" Opacity="0.65"/>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding BrowseSites}" SelectedItem="{Binding BrowseSiteSel}"
+                                      AutomationProperties.AutomationId="combo-browse-site" AutomationProperties.Name="浏览站点选择">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <Run Text="{Binding ProtocolText}"/><Run Text=" · "/><Run Text="{Binding Name}"/>
+                                            <Run Text=" (" Foreground="Gray"/><Run Text="{Binding HostText}" Foreground="Gray"/><Run Text=")" Foreground="Gray"/>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Grid.Column="2" Text="路径" VerticalAlignment="Center" Opacity="0.65"/>
+                            <TextBox Grid.Column="3" Classes="mono" Text="{Binding BrowsePath}" Watermark="远程目录，如 / 或 /root"
+                                     AutomationProperties.AutomationId="input-browse-path" AutomationProperties.Name="浏览路径">
+                                <TextBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding GoToCommand}"/>
+                                </TextBox.KeyBindings>
+                            </TextBox>
+                            <Button Grid.Column="4" Content="转到" Classes="accent" Padding="12,4"
+                                    Command="{Binding GoToCommand}"
+                                    AutomationProperties.AutomationId="btn-browse-go" AutomationProperties.Name="转到目录"/>
+                            <Button Grid.Column="5" Content="⬆ 上级" Padding="12,4"
+                                    Command="{Binding UpCommand}"
+                                    AutomationProperties.AutomationId="btn-browse-up" AutomationProperties.Name="上级目录"/>
+                            <Button Grid.Column="6" Content="↻ 刷新" Padding="12,4"
+                                    Command="{Binding RefreshBrowseCommand}"
+                                    AutomationProperties.AutomationId="btn-browse-refresh" AutomationProperties.Name="刷新目录"/>
+                        </Grid>
+
+                        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8"
+                              Margin="0,8,0,0">
+                            <TextBlock Grid.Column="0" Text="本地保存" VerticalAlignment="Center" Opacity="0.65"/>
+                            <TextBox Grid.Column="1" Classes="mono" Text="{Binding BrowseLocal}"
+                                     Watermark="下载到本地的完整文件路径"
+                                     AutomationProperties.AutomationId="input-browse-local" AutomationProperties.Name="本地保存路径"/>
+                            <Button Grid.Column="2" Content="⬇ 下载选中文件" Classes="accent" Padding="12,4"
+                                    Command="{Binding DownloadSelectedCommand}"
+                                     ToolTip.Tip="把列表中选中的远程文件下载到上方本地路径。"
+                                    AutomationProperties.AutomationId="btn-browse-download" AutomationProperties.Name="下载选中文件"/>
+                            <Button Grid.Column="3" Content="⤴ 打开目录" Padding="12,4"
+                                    Command="{Binding OpenBrowseItemCommand}"
+                                    ToolTip.Tip="进入选中的目录（双击列表行同样有效）。"
+                                    AutomationProperties.AutomationId="btn-browse-open" AutomationProperties.Name="打开目录"/>
+                            <Button Grid.Column="4" Content="→ 填为传输目标" Padding="12,4"
+                                    Command="{Binding UseAsUploadTargetCommand}"
+                                    ToolTip.Tip="把当前目录（或选中的文件完整路径）填到传输表单的远程路径并选中该站点。"
+                                    AutomationProperties.AutomationId="btn-browse-use" AutomationProperties.Name="填为传输目标"/>
+                        </Grid>
+
+                        <TextBlock DockPanel.Dock="Top" Margin="4,4,4,6" TextWrapping="Wrap"
+                                   Foreground="#D13438" FontSize="12.5"
+                                   Text="{Binding BrowseHint}"
+                                   IsVisible="{Binding BrowseHint, Converter={x:Static vm:Converters.StringNotNullOrEmpty}}"/>
+                        <TextBlock DockPanel.Dock="Top" Opacity="0.5" Margin="4,4,4,6" TextWrapping="Wrap"
+                                   Text="双击目录行进入；SFTP/FTP 站点可直接浏览，SCP 站点只能传输不能列目录。"/>
+
+                        <DataGrid x:Name="BrowseGrid" ItemsSource="{Binding BrowseItems}" SelectedItem="{Binding BrowseSel}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                                  CanUserSortColumns="True" DoubleTapped="BrowseGrid_DoubleTapped"
+                                  AutomationProperties.AutomationId="grid-browse" AutomationProperties.Name="远程目录列表">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="2.5*"/>
+                                <DataGridTextColumn Header="类型" Binding="{Binding TypeText}" Width="90"/>
+                                <DataGridTextColumn Header="大小" Binding="{Binding SizeText}" Width="110"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ===== 传输记录 ===== -->
+            <TabItem Header="📋 传输记录" AutomationProperties.AutomationId="tab-records">
+                <Border Classes="card" Padding="10,8,10,10" Margin="0,10,0,0">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="14"
+                              Margin="4,2,4,8">
+                            <TextBlock Grid.Column="0" Text="📋 传输记录" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="清空" Padding="12,4"
+                                    Command="{Binding ClearLogCommand}"
+                                    AutomationProperties.AutomationId="btn-clearrec" AutomationProperties.Name="清空记录"/>
+                            <Button Grid.Column="2" Content="复制全部" Padding="12,4"
+                                    Command="{Binding CopyAllLogCommand}"
+                                    AutomationProperties.AutomationId="btn-copyrec" AutomationProperties.Name="复制全部记录"/>
+                            <TextBlock Grid.Column="4" Text="{Binding StatsText}" Opacity="0.6" VerticalAlignment="Center"
+                                       AutomationProperties.AutomationId="tb-stats" AutomationProperties.Name="统计"/>
+                        </Grid>
+
+                        <TextBlock DockPanel.Dock="Top" Text="暂无传输记录——在「站点与传输」手动传输，或启动 MCP 服务让 AI 客户端调用。"
+                                   Opacity="0.5" Margin="6,10" IsVisible="{Binding Items.Count, Converter={x:Static vm:Converters.CountIsZero}}"/>
+                        <ListBox ItemsSource="{Binding Items}"
+                                 AutomationProperties.AutomationId="list-records" AutomationProperties.Name="传输记录列表">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" Margin="2,2,4,2"
+                                          AutomationProperties.Name="{Binding Message}">
+                                        <TextBlock Grid.Column="0" Text="{Binding TimeText}" Classes="mono" Opacity="0.5" FontSize="12"
+                                                   VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                        <Border Grid.Column="1" Classes="kindBadge" Tag="{Binding Tag}">
+                                            <TextBlock Text="{Binding KindText}" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </Border>
+                                        <TextBlock Grid.Column="2" Classes="mono recText" Tag="{Binding Tag}" Text="{Binding Message}"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Top"
+                                                   ToolTip.Tip="{Binding Message}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</UserControl>

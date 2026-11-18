@@ -1,0 +1,90 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:FileTransferTool.Ui.Views"
+        xmlns:cvt="using:FileTransferTool.Ui.ViewModels"
+        x:Class="FileTransferTool.Ui.Views.SiteEditWindow"
+        Title="站点编辑"
+        Width="480" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.testResult[Tag=ok]">
+            <Setter Property="Foreground" Value="#107C10"/>
+        </Style>
+        <Style Selector="TextBlock.testResult[Tag=fail]">
+            <Setter Property="Foreground" Value="#D13438"/>
+        </Style>
+        <Style Selector="TextBlock.testResult[Tag=busy]">
+            <Setter Property="Foreground" Value="#8A8A8A"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="*,Auto" Margin="18,14,18,12">
+        <StackPanel Grid.Row="0" Spacing="10">
+            <Grid ColumnDefinitions="Auto,*,Auto,90" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" Text="名称" VerticalAlignment="Center" Opacity="0.7"/>
+                <TextBox Grid.Column="1" Text="{Binding NameInput}" Watermark="如：SylixOS 设备"
+                         AutomationProperties.AutomationId="input-site-name" AutomationProperties.Name="站点名称"/>
+                <TextBlock Grid.Column="2" Text="协议" VerticalAlignment="Center" Opacity="0.7" Margin="4,0,0,0"/>
+                <ComboBox Grid.Column="3" ItemsSource="{x:Static vm:SiteEditWindowViewModel.Protocols}"
+                          SelectedIndex="{Binding ProtocolIndex}"
+                          AutomationProperties.AutomationId="combo-site-proto" AutomationProperties.Name="站点协议"/>
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*,Auto,90" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" Text="主机" VerticalAlignment="Center" Opacity="0.7"/>
+                <TextBox Grid.Column="1" Text="{Binding HostInput}" Watermark="IP 或主机名"
+                         Classes="mono"
+                         AutomationProperties.AutomationId="input-site-host" AutomationProperties.Name="主机地址"/>
+                <TextBlock Grid.Column="2" Text="端口" VerticalAlignment="Center" Opacity="0.7" Margin="4,0,0,0"
+                           ToolTip.Tip="跟随协议默认值填入（FTP 21 / SFTP·SCP 22），按需修改。"/>
+                <TextBox Grid.Column="3" Text="{Binding PortInput}" Watermark="1-65535"
+                         Classes="mono"
+                         AutomationProperties.AutomationId="input-site-port" AutomationProperties.Name="端口"/>
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" Text="用户名" VerticalAlignment="Center" Opacity="0.7"/>
+                <TextBox Grid.Column="1" Text="{Binding UsernameInput}" Classes="mono"
+                         AutomationProperties.AutomationId="input-site-user" AutomationProperties.Name="用户名"/>
+                <TextBlock Grid.Column="2" Text="密码" VerticalAlignment="Center" Opacity="0.7" Margin="4,0,0,0"/>
+                <TextBox Grid.Column="3" Text="{Binding PasswordInput}" PasswordChar="*"
+                         AutomationProperties.AutomationId="input-site-pass" AutomationProperties.Name="密码"/>
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" Text="私钥" VerticalAlignment="Center" Opacity="0.7"
+                           ToolTip.Tip="SFTP/SCP 私钥文件路径（设置后优先于密码认证；FTP 忽略）"/>
+                <TextBox Grid.Column="1" Text="{Binding KeyPathInput}" Watermark="（可选）id_rsa 私钥路径" Classes="mono"
+                         AutomationProperties.AutomationId="input-site-key" AutomationProperties.Name="私钥路径"/>
+                <Button Grid.Column="2" Content="浏览…" Padding="10,5" Click="BrowseKeyClick"
+                        ToolTip.Tip="打开文件选择框选取私钥文件。"
+                        AutomationProperties.AutomationId="btn-site-browsekey" AutomationProperties.Name="浏览私钥"/>
+                <TextBlock Grid.Column="3" Text="FTP 被动" VerticalAlignment="Center" Opacity="0.7" Margin="6,0,0,0"
+                           ToolTip.Tip="FTP 被动模式（多数防火墙/NAT 环境需要）"/>
+                <ToggleSwitch Grid.Column="4" IsChecked="{Binding Passive}"
+                              AutomationProperties.AutomationId="chk-site-passive" AutomationProperties.Name="被动模式"/>
+            </Grid>
+
+            <!-- 就地测试连接：用当前填写内容（不必先保存），结果彩色显示，填错当场改 -->
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="0,2,0,0">
+                <Button Grid.Column="0" Content="🔌 测试连接" Padding="14,5" IsEnabled="{Binding !Testing}"
+                        Command="{Binding TestConnectionCommand}"
+                        ToolTip.Tip="用当前填写的内容测试连通性与认证（不保存站点）。"
+                        AutomationProperties.AutomationId="btn-site-test" AutomationProperties.Name="测试连接"/>
+                <TextBlock Grid.Column="1" Classes="testResult" Tag="{Binding TestState}" Text="{Binding TestResult}"
+                           FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </Grid>
+
+            <TextBlock Text="{Binding ErrorText}" Foreground="#D13438" FontSize="12.5"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding ErrorText, Converter={x:Static cvt:Converters.StringNotNullOrEmpty}}"/>
+            <TextBlock Text="ℹ 密码明文保存在本机 %LOCALAPPDATA%\SystemToolkit\transfer-sites.json，注意保管。"
+                       Opacity="0.5" FontSize="11.5" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="取消" Padding="20,6" Click="CancelClick"
+                    AutomationProperties.AutomationId="btn-site-cancel" AutomationProperties.Name="取消"/>
+            <Button Content="保存" Classes="accent" Padding="20,6" Click="OkClick"
+                    AutomationProperties.AutomationId="btn-site-ok" AutomationProperties.Name="保存站点"/>
+        </StackPanel>
+    </Grid>
+</Window>

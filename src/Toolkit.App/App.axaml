@@ -20,6 +20,13 @@
         <Style Selector="Button">
             <Setter Property="CornerRadius" Value="6"/>
         </Style>
+        <!-- 普通按钮悬停/按下明显变色（accent/卡片/色板/自绘标题栏按钮有各自模板，排除） -->
+        <Style Selector="Button:pointerover:not(.accent):not(.toolcard):not(.cardSettings):not(.swatch):not(.caption):not(.barbtn)">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="Button:pressed:not(.accent):not(.toolcard):not(.cardSettings):not(.swatch):not(.caption):not(.barbtn)">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorTertiaryBrush}"/>
+        </Style>
         <Style Selector="TextBox">
             <Setter Property="CornerRadius" Value="6"/>
         </Style>

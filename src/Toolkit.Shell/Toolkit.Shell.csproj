@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.4" />
+    <!-- 统一持久化存储（流量历史/日志等），内嵌 e_sqlite3 无需额外 native 包 -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
   </ItemGroup>
 
 </Project>

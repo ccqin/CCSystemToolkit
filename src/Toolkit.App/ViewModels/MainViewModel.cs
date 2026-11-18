@@ -15,6 +15,34 @@ using Toolkit.Shell;
 
 namespace Toolkit.App.ViewModels;
 
+/// <summary>卡片描述按宽度预算截断（中英文宽度不同：全角≈1 单位、半角≈0.5-0.6 单位）。</summary>
+internal static class CardTextUtil
+{
+    private const double UnitsPerLine = 20.0;   // 卡片内容宽约 282px / 全角字宽约 14px
+
+    internal static string Truncate(string text, double lines)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        var budget = UnitsPerLine * lines - 1.0;   // 预留省略号宽度
+        double acc = 0;
+        for (var i = 0; i < text.Length; i++)
+        {
+            acc += Width(text[i]);
+            if (acc > budget) return text[..i].TrimEnd() + "…";
+        }
+        return text;
+    }
+
+    private static double Width(char c)
+    {
+        if (c >= 0x2E80) return 1.0;                                    // CJK/全角
+        if (char.IsUpper(c) || char.IsDigit(c)) return 0.62;            // 大写/数字
+        if (char.IsLower(c)) return 0.52;                               // 小写
+        if (c == ' ') return 0.30;                                      // 空格
+        return 0.45;                                                    // 半角标点等
+    }
+}
+
 /// <summary>主页工具卡片 ViewModel（Module 为 null 表示"更多工具开发中"占位卡）。</summary>
 public partial class ToolCardViewModel : ObservableObject
 {
@@ -36,6 +64,10 @@ public partial class ToolCardViewModel : ObservableObject
     public string Glyph => _module?.Glyph ?? "🧩";
     public string Title => _module?.Title ?? "更多工具开发中";
     public string Description => _module?.Description ?? "工具集会持续集成更多系统管理工具。";
+
+    /// <summary>卡片显示用描述：按内容宽度预算截断到约 3.5 行（中文全角=1 单位、半角≈0.5-0.6），
+    /// 第 4 行只填半行宽度，右下留白给"进入 →"，避免文字与按钮重叠。完整描述见 ToolTip。</summary>
+    public string DisplayDescription => CardTextUtil.Truncate(Description, lines: 3.45);
 
     /// <summary>卡片默认背景色（未自定义时使用）。</summary>
     public const string DefaultCardColor = "#2E9E68";
@@ -274,6 +306,8 @@ public partial class MainViewModel : ObservableObject, IToolHost
             : ToolLogLevel.Info;
         Logs.Insert(0, new ToolLogEntry { Source = source, Message = message, Level = level });
         while (Logs.Count > MaxLogEntries) Logs.RemoveAt(Logs.Count - 1);
+        // 双写 SQLite（保留 30 天，供事后排查；失败不影响内存日志）
+        Services.LogHistoryStore.Write(source, level.ToString(), message);
     }
 
     [RelayCommand]

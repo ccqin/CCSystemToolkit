@@ -4,55 +4,156 @@
         x:Class="Toolkit.App.MainWindow"
         Title="系统管理工具集"
         Width="1280" Height="860" MinWidth="1080" MinHeight="700"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="BorderOnly">
+
+    <Window.Styles>
+        <!-- 自绘窗口按钮：与标题栏同高(40)、方形、透明底；内容 Panel 铺满按钮，
+             内层 Transparent Border 做全区域命中兜底（Fluent 模板背景不参与命中） -->
+        <Style Selector="Button.caption">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        </Style>
+        <!-- 标题栏按钮悬停色用硬编码（BorderOnly 自绘标题栏内模板部件 setter 的 DynamicResource 实测解析不到，
+             关闭按钮硬编码 #E81123 生效、Subtle/Accent DynamicResource 无效的同源现象） -->
+        <Style Selector="Button.caption:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#330078D4"/>
+        </Style>
+        <!-- 关闭按钮悬停红色（Windows 惯例） -->
+        <Style Selector="Button.captionClose:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#E81123"/>
+        </Style>
+        <Style Selector="Button.captionClose:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <!-- 标题栏内功能按钮（返回/MCP）：与窗口按钮同高、方形、透明底+悬停高亮 -->
+        <Style Selector="Button.barbtn">
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="Button.barbtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#330078D4"/>
+        </Style>
+        <!-- 双保险：按钮本体背景一并设置（模板 ContentPresenter 背景走 TemplateBinding 传播） -->
+        <Style Selector="Button.barbtn:pointerover">
+            <Setter Property="Background" Value="#330078D4"/>
+        </Style>
+    </Window.Styles>
 
     <DockPanel>
         <!-- 底部全局状态栏 -->
         <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0"
                 BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
-                Background="{DynamicResource LayerFillColorDefaultBrush}"
-                Padding="12,6">
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <TextBlock Text="权限:" Opacity="0.6"/>
-                    <TextBlock Text="{Binding PrivilegeText}" Foreground="{Binding PrivilegeColor}" FontWeight="SemiBold"/>
-                </StackPanel>
-                <TextBlock Grid.Column="1" Text="{Binding StatusText}" Opacity="0.75" TextTrimming="CharacterEllipsis"
-                           VerticalAlignment="Center" Margin="16,0,16,0"/>
-                <Button Grid.Column="2" Content="以管理员重启" Command="{Binding ElevateRestartCommand}" Padding="14,4"
-                        AutomationProperties.AutomationId="btn-elevate"
-                        ToolTip.Tip="部分工具需要管理员权限。点击后弹出 UAC 确认框，程序将以管理员身份重启（重启后回到主页）。"/>
-                <Button Grid.Column="3" Content="日志" Padding="14,4" Margin="8,0,0,0"
-                        AutomationProperties.AutomationId="btn-logs-flyout"
-                        ToolTip.Tip="查看所有工具归集到主页的统一日志。">
-                    <Button.Flyout>
-                        <Flyout Placement="Top">
-                            <Border Width="780" Height="400" Padding="6">
-                                <views:LogListView/>
-                            </Border>
-                        </Flyout>
-                    </Button.Flyout>
-                </Button>
-                <Button Grid.Column="4" Content="{Binding ThemeText}" Command="{Binding CycleThemeCommand}" Padding="14,4" Margin="8,0,0,0"
-                        AutomationProperties.AutomationId="btn-theme" AutomationProperties.Name="主题切换"
-                        ToolTip.Tip="循环切换界面主题：跟随系统 → 浅色 → 深色。"/>
-                <TextBlock Grid.Column="5" Text="Avalonia · .NET 10" Opacity="0.45" VerticalAlignment="Center" Margin="12,0,0,0"/>
-            </Grid>
+                Background="{DynamicResource LayerFillColorDefaultBrush}">
+            <Panel>
+                <!-- 约 7% 主题蓝叠层：铺满整栏（含边距区），给底色一点颜色倾向 -->
+                <Border Background="#120078D4" IsHitTestVisible="False"/>
+                <!-- 边距写在内容上（不写在外层 Border 的 Padding 上，否则叠层盖不到边缘出现空隙） -->
+                <Grid Margin="12,6" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Text="权限:" Opacity="0.6"/>
+                        <TextBlock Text="{Binding PrivilegeText}" Foreground="{Binding PrivilegeColor}" FontWeight="SemiBold"/>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding StatusText}" Opacity="0.75" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" Margin="16,0,16,0"/>
+                    <Button Grid.Column="2" Content="以管理员重启" Command="{Binding ElevateRestartCommand}" Padding="14,4"
+                            AutomationProperties.AutomationId="btn-elevate"
+                            ToolTip.Tip="部分工具需要管理员权限。点击后弹出 UAC 确认框，程序将以管理员身份重启（重启后回到主页）。"/>
+                    <Button Grid.Column="3" Content="日志" Padding="14,4" Margin="8,0,0,0"
+                            AutomationProperties.AutomationId="btn-logs-flyout"
+                            ToolTip.Tip="查看所有工具归集到主页的统一日志。">
+                        <Button.Flyout>
+                            <Flyout Placement="Top">
+                                <Border Width="780" Height="400" Padding="6">
+                                    <views:LogListView/>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button Grid.Column="4" Content="{Binding ThemeText}" Command="{Binding CycleThemeCommand}" Padding="14,4" Margin="8,0,0,0"
+                            AutomationProperties.AutomationId="btn-theme" AutomationProperties.Name="主题切换"
+                            ToolTip.Tip="循环切换界面主题：跟随系统 → 浅色 → 深色。"/>
+                    <TextBlock Grid.Column="5" Text="Avalonia · .NET 10" Opacity="0.45" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                </Grid>
+            </Panel>
         </Border>
 
-        <!-- 顶部导航条 -->
-        <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1"
+        <!-- 自绘标题栏（WindowDecorations=BorderOnly 去掉系统标题栏，保留系统边框/缩放/阴影）：
+             空白处拖拽移动、双击最大化/还原（纯托管实现：BeginMoveDrag 与 ElementRole=TitleBar
+             在 BorderOnly 下实测均不生效，见 MainWindow.axaml.cs） -->
+        <Border DockPanel.Dock="Top" Height="40" BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
-                Background="{DynamicResource LayerFillColorAltBrush}"
-                Padding="14,8">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-                <Button Grid.Column="0" Command="{Binding GoHomeCommand}" Content="← 返回主页" Padding="12,5"
-                        IsVisible="{Binding !IsHome}"
-                        ToolTip.Tip="返回工具集主页（工具内的未保存状态会丢失）。"/>
-                <TextBlock Grid.Column="1" Text="{Binding HeaderTitle}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <Button Grid.Column="3" Content="🔌 MCP 服务" Command="{Binding ShowMcpSettingsCommand}" Padding="14,5"
+                Background="Transparent"
+                PointerPressed="TitleBar_PointerPressed"
+                PointerMoved="TitleBar_PointerMoved"
+                PointerReleased="TitleBar_PointerReleased">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto">
+                <!-- 可拖拽区底色：与底部状态栏同款浅灰，和内容区做轻微区分。
+                     独立一层且不参与命中：实测直接给外层 Border 设 LayerFillColorAltBrush
+                     时栏内空白区域点击/拖拽全部落空（疑似 BorderOnly 下该 DynamicResource 未解析），
+                     外层用显式 Transparent 保证整栏可命中 -->
+                <Border Grid.ColumnSpan="8" Background="{DynamicResource LayerFillColorDefaultBrush}"
+                        IsHitTestVisible="False"/>
+                <!-- 约 7% 主题蓝叠层：给标题栏底色一点颜色倾向（与底部状态栏一致） -->
+                <Border Grid.ColumnSpan="8" Background="#120078D4"
+                        IsHitTestVisible="False"/>
+                <TextBlock Grid.Column="0" Text="🧰" FontSize="15" VerticalAlignment="Center" Margin="12,0,8,0"/>
+                <Button Grid.Column="1" Classes="barbtn" Command="{Binding GoHomeCommand}"
+                        IsVisible="{Binding !IsHome}" Margin="0,0,8,0"
+                        AutomationProperties.AutomationId="btn-gohome" AutomationProperties.Name="返回主页"
+                        ToolTip.Tip="返回工具集主页（工具内的未保存状态会丢失）。">
+                    <Panel>
+                        <Border Background="Transparent"/>
+                        <TextBlock Text="← 返回主页" VerticalAlignment="Center"/>
+                    </Panel>
+                </Button>
+                <TextBlock Grid.Column="2" Text="{Binding HeaderTitle}" FontSize="13" FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="4" Classes="barbtn" Command="{Binding ShowMcpSettingsCommand}" Margin="0,0,6,0"
                         AutomationProperties.AutomationId="btn-mcpsettings" AutomationProperties.Name="MCP服务设置"
-                        ToolTip.Tip="MCP 服务管理：启动/停止服务、复制接入 URL、管理 AI 客户端接入授权（令牌）。"/>
+                        ToolTip.Tip="MCP 服务管理：启动/停止服务、复制接入 URL、管理 AI 客户端接入授权（令牌）。">
+                    <Panel>
+                        <Border Background="Transparent"/>
+                        <TextBlock Text="🔌 MCP 服务" VerticalAlignment="Center"/>
+                    </Panel>
+                </Button>
+                <Button Grid.Column="5" Classes="caption" Click="MinimizeClick"
+                        AutomationProperties.AutomationId="btn-win-min" AutomationProperties.Name="最小化"
+                        ToolTip.Tip="最小化">
+                    <!-- Panel 显式 46x40 铺满按钮：Fluent 模板不吃 Stretch 内容对齐，不显式给尺寸
+                         时 Panel 塌缩到字形大小，按钮边缘点击会穿透到标题栏拖拽区 -->
+                    <Panel Width="46" Height="40">
+                        <Border Background="Transparent"/>
+                        <TextBlock Text="—" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Panel>
+                </Button>
+                <Button Grid.Column="6" Classes="caption" Click="MaxRestoreClick"
+                        AutomationProperties.AutomationId="btn-win-max" AutomationProperties.Name="最大化或还原"
+                        ToolTip.Tip="最大化 / 还原">
+                    <Panel Width="46" Height="40">
+                        <Border Background="Transparent"/>
+                        <TextBlock x:Name="MaxRestoreGlyph" Text="▢"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Panel>
+                </Button>
+                <Button Grid.Column="7" Classes="caption captionClose" Click="CloseClick"
+                        AutomationProperties.AutomationId="btn-win-close" AutomationProperties.Name="关闭"
+                        ToolTip.Tip="关闭">
+                    <Panel Width="46" Height="40">
+                        <Border Background="Transparent"/>
+                        <TextBlock Text="✕" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Panel>
+                </Button>
             </Grid>
         </Border>
 

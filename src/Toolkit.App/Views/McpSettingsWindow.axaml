@@ -1,8 +1,9 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:Toolkit.App.ViewModels"
         x:Class="Toolkit.App.Views.McpSettingsWindow"
         Title="MCP 服务"
-        Width="820" Height="680" MinWidth="660" MinHeight="500"
+        Width="860" Height="700" MinWidth="680" MinHeight="520"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False" CanResize="True">
 
     <Window.Styles>
@@ -18,81 +19,101 @@
     </Window.Styles>
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="18,14,18,10">
-        <TextBlock Grid.Row="0" Text="🔌 MCP 服务管理" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10"/>
+        <TextBlock Grid.Row="0" Text="🔌 MCP 服务（聚合网关）" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
         <TabControl Grid.Row="1" AutomationProperties.AutomationId="tabs-mcpsettings" AutomationProperties.Name="MCP服务设置页签">
 
-            <!-- ===== 服务 ===== -->
+            <!-- ===== 服务：网关 + 能力开关 ===== -->
             <TabItem Header="服务" AutomationProperties.AutomationId="tab-mcp-services">
                 <ScrollViewer>
-                    <ItemsControl ItemsSource="{Binding Services}" Margin="0,2,4,0">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Classes="card" Margin="0,0,0,10" Padding="14,12">
-                                    <StackPanel Spacing="8">
-                                        <!-- 名称/状态 + 端口 + 启停 -->
-                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontSize="14.5" FontWeight="SemiBold"/>
-                                                <TextBlock Classes="svcState" Tag="{Binding StateTag}" Text="{Binding StateText}"
-                                                           FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="1" Text="端口" Opacity="0.65" VerticalAlignment="Center"/>
-                                            <TextBox Grid.Column="2" Width="88" Text="{Binding PortInput}"
-                                                     IsEnabled="{Binding !IsRunning}"
-                                                     ToolTip.Tip="服务监听端口（1-65535），运行中不可修改；修改后下次启动生效并记住。"
-                                                     AutomationProperties.AutomationId="input-svcport" AutomationProperties.Name="服务端口"/>
-                                            <Button Grid.Column="3" Content="▶ 启动" Classes="accent" Padding="14,5" MinWidth="76"
-                                                    Command="{Binding StartServiceCommand}" IsVisible="{Binding !IsRunning}"
-                                                    AutomationProperties.AutomationId="btn-svcstart" AutomationProperties.Name="启动服务"/>
-                                            <Button Grid.Column="4" Content="■ 停止" Padding="14,5" MinWidth="76"
-                                                    Command="{Binding StopServiceCommand}" IsVisible="{Binding IsRunning}"
-                                                    AutomationProperties.AutomationId="btn-svcstop" AutomationProperties.Name="停止服务"/>
-                                        </Grid>
-                                        <TextBlock Text="{Binding Description}" Opacity="0.6" FontSize="12" TextWrapping="Wrap"/>
-                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8"
-                                              IsVisible="{Binding IsRunning}">
-                                            <TextBlock Grid.Column="0" Text="服务地址" Opacity="0.65" VerticalAlignment="Center"/>
-                                            <TextBlock Grid.Column="1" Classes="mono" Text="{Binding EndpointUrl}"
-                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                            <Button Grid.Column="2" Content="复制地址" Padding="10,4"
-                                                    Command="{Binding CopyServiceUrlCommand}"
-                                                    ToolTip.Tip="复制不含令牌的服务地址（接入需令牌，见下方接入链接）。"
-                                                    AutomationProperties.AutomationId="btn-copysvcurl" AutomationProperties.Name="复制服务地址"/>
-                                        </Grid>
-                                        <TextBlock Text="{Binding TotalCalls, StringFormat='本次运行期间工具调用 {0} 次'}"
-                                                   Opacity="0.6" FontSize="12"/>
+                    <StackPanel Margin="0,2,4,0">
 
-                                        <Separator/>
-
-                                        <TextBlock Text="接入链接（含令牌，复制给你的 AI 客户端配置）" FontWeight="SemiBold" FontSize="12.5"/>
-                                        <TextBlock Text="尚无接入项——到「接入授权」页新增一个，再回来复制接入 URL。"
-                                                   Opacity="0.55" FontSize="12" IsVisible="{Binding NoAccessLinks}"/>
-                                        <ItemsControl ItemsSource="{Binding AccessLinks}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" Margin="0,0,0,6">
-                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12.5"/>
-                                                            <TextBlock Text="{Binding EnabledText}" FontSize="11.5" Foreground="#D13438"/>
-                                                        </StackPanel>
-                                                        <Border Grid.Column="1" Classes="linkRow" Tag="{Binding EnabledTag}">
-                                                            <TextBlock Classes="mono" Text="{Binding Url}" Opacity="0.8" FontSize="12"
-                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                                       AutomationProperties.Name="{Binding Url}"/>
-                                                        </Border>
-                                                        <Button Grid.Column="3" Content="复制接入 URL" Padding="10,4"
-                                                                Command="{Binding CopyUrlCommand}"
-                                                                AutomationProperties.AutomationId="btn-copyaccessurl" AutomationProperties.Name="复制接入URL"/>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                        <!-- 网关：单端口单 URL 暴露全部启用的能力 -->
+                        <Border Classes="card" Margin="0,0,0,10" Padding="14,12">
+                            <StackPanel Spacing="8">
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <TextBlock Text="工具集 MCP 网关" FontSize="14.5" FontWeight="SemiBold"/>
+                                        <TextBlock Classes="svcState" Tag="{Binding StateTag}" Text="{Binding StateText}"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                    <TextBlock Grid.Column="1" Text="端口" Opacity="0.65" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="2" Width="88" Text="{Binding PortInput}"
+                                             IsEnabled="{Binding !IsRunning}"
+                                             ToolTip.Tip="网关监听端口（1-65535），运行中不可修改；修改后下次启动生效并记住。"
+                                             AutomationProperties.AutomationId="input-svcport" AutomationProperties.Name="网关端口"/>
+                                    <Button Grid.Column="3" Content="▶ 启动" Classes="accent" Padding="14,5" MinWidth="76"
+                                            Command="{Binding StartGatewayCommand}" IsVisible="{Binding !IsRunning}"
+                                            AutomationProperties.AutomationId="btn-svcstart" AutomationProperties.Name="启动网关"/>
+                                    <Button Grid.Column="4" Content="■ 停止" Padding="14,5" MinWidth="76"
+                                            Command="{Binding StopGatewayCommand}" IsVisible="{Binding IsRunning}"
+                                            AutomationProperties.AutomationId="btn-svcstop" AutomationProperties.Name="停止网关"/>
+                                </Grid>
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8"
+                                      IsVisible="{Binding IsRunning}">
+                                    <TextBlock Grid.Column="0" Text="服务地址" Opacity="0.65" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Classes="mono" Text="{Binding EndpointUrl}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <Button Grid.Column="2" Content="复制地址" Padding="10,4"
+                                            Command="{Binding CopyServiceUrlCommand}"
+                                            ToolTip.Tip="复制不含令牌的服务地址（接入需令牌，见下方接入链接）。"
+                                            AutomationProperties.AutomationId="btn-copysvcurl" AutomationProperties.Name="复制服务地址"/>
+                                </Grid>
+                                <TextBlock Text="{Binding TotalCalls, StringFormat='网关本次运行工具调用 {0} 次'}"
+                                           Opacity="0.6" FontSize="12"/>
+
+                                <Separator/>
+
+                                <TextBlock Text="接入链接（含令牌，复制给你的 AI 客户端配置这一条即可）" FontWeight="SemiBold" FontSize="12.5"/>
+                                <TextBlock Text="尚无接入项——到「接入授权」页新增一个，再回来复制接入 URL。"
+                                           Opacity="0.55" FontSize="12" IsVisible="{Binding AccessLinks.Count, Converter={x:Static local:Converters.CountIsZero}}"/>
+                                <ItemsControl ItemsSource="{Binding AccessLinks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" Margin="0,0,0,6">
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12.5"/>
+                                                    <TextBlock Text="{Binding EnabledText}" FontSize="11.5" Foreground="#D13438"/>
+                                                </StackPanel>
+                                                <Border Grid.Column="1" Classes="linkRow" Tag="{Binding EnabledTag}">
+                                                    <TextBlock Classes="mono" Text="{Binding Url}" Opacity="0.8" FontSize="12"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                               AutomationProperties.Name="{Binding Url}"/>
+                                                </Border>
+                                                <Button Grid.Column="3" Content="复制接入 URL" Padding="10,4"
+                                                        Command="{Binding CopyUrlCommand}"
+                                                        AutomationProperties.AutomationId="btn-copyaccessurl" AutomationProperties.Name="复制接入URL"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 能力开关：启停只影响该能力的工具是否出现在网关清单 -->
+                        <TextBlock Text="工具能力（关掉开关后对应工具从网关清单移除，AI 调用会收到明确提示）"
+                                   Opacity="0.6" FontSize="12" Margin="4,0,0,6"/>
+                        <ItemsControl ItemsSource="{Binding Capabilities}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Classes="card" Margin="0,0,0,10" Padding="14,10">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="12">
+                                            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Description}" Opacity="0.6" FontSize="12" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="{Binding ToolCount, StringFormat='工具 {0} 个'}"
+                                                       Opacity="0.6" FontSize="12" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding TotalCalls, StringFormat='调用 {0} 次'}"
+                                                       Opacity="0.6" FontSize="12" VerticalAlignment="Center"/>
+                                            <ToggleSwitch Grid.Column="3" IsChecked="{Binding Enabled}"
+                                                          AutomationProperties.AutomationId="switch-capability" AutomationProperties.Name="{Binding Name}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </ScrollViewer>
             </TabItem>
 
@@ -111,7 +132,7 @@
                                     Command="{Binding AddAccessCommand}"
                                     AutomationProperties.AutomationId="btn-addaccess" AutomationProperties.Name="新增接入"/>
                         </StackPanel>
-                        <TextBlock Text="ℹ 每个 AI 客户端一个接入项：接入 URL = 服务地址 + ?token=令牌。停用或删除后该客户端立即失效；同一令牌可访问所有已启动的 MCP 服务。"
+                        <TextBlock Text="ℹ 每个 AI 客户端一个接入项：接入 URL = 网关地址 + ?token=令牌。停用或删除后该客户端立即失效；同一令牌可访问网关上全部启用的工具。"
                                    Opacity="0.55" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"/>
                     </DockPanel>
 

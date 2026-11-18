@@ -4,19 +4,12 @@
              x:Class="Toolkit.App.Views.HomeView">
 
     <ScrollViewer>
-        <StackPanel Margin="48,40,48,40" MaxWidth="1100" HorizontalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="16">
-                <TextBlock Text="🧰" FontSize="42"/>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="系统管理工具集" FontSize="28" FontWeight="Bold"/>
-                    <TextBlock Text="集成常用 Windows 系统管理工具 · 点击卡片进入 · ⚙ 可自定义卡片背景"
-                               FontSize="13" Opacity="0.6" Margin="0,5,0,0"/>
-                </StackPanel>
-            </StackPanel>
+        <!-- 大标题已上移至自绘标题栏，主页只保留一行提示 -->
+        <StackPanel Margin="48,22,48,40" MaxWidth="1100" HorizontalAlignment="Center">
+            <TextBlock Text="集成常用 Windows 系统管理工具 · 点击卡片进入 · ⚙ 可自定义卡片背景"
+                       FontSize="12.5" Opacity="0.6"/>
 
-            <TextBlock Text="可用工具" FontSize="15" FontWeight="SemiBold" Margin="0,36,0,14"/>
-
-            <ItemsControl ItemsSource="{Binding Cards}">
+            <ItemsControl ItemsSource="{Binding Cards}" Margin="0,18,0,0">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel/>
@@ -46,16 +39,22 @@
                                 <Border Background="#8C000000" CornerRadius="10" IsVisible="{Binding HasImageBackground}"/>
 
                                 <!-- 文字颜色由样式控制：默认主题前景色，customBg 时白色 -->
-                                <Grid RowDefinitions="Auto,*,Auto" Margin="20,16">
+                                <Grid RowDefinitions="Auto,*" Margin="20,16">
                                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
                                         <TextBlock Classes="cardText" Text="{Binding Glyph}" FontSize="30"/>
                                         <TextBlock Classes="cardText" Text="{Binding Title}" FontSize="17" FontWeight="SemiBold"
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
-                                    <TextBlock Grid.Row="1" Classes="cardText" Text="{Binding Description}" TextWrapping="Wrap"
-                                               Margin="0,10,0,0" Opacity="0.85"/>
-                                    <TextBlock Grid.Row="2" Classes="cardText" Text="进入 →" Opacity="0.55" FontSize="12"
-                                               HorizontalAlignment="Right" IsVisible="{Binding Enabled}"/>
+                                    <!-- 描述按宽度预算截断到约 3.5 行（全角/半角宽度分别计算）：
+                                         第 4 行只填半行宽度，右下留白给"进入 →"（同排不重叠）；
+                                         不足 3.5 行时自然显示；完整描述悬停卡片时由 ToolTip 展示 -->
+                                    <Grid Grid.Row="1">
+                                        <TextBlock Classes="cardText" Text="{Binding DisplayDescription}" TextWrapping="Wrap"
+                                                   Margin="0,10,0,0" Opacity="0.85"/>
+                                        <TextBlock Classes="cardText" Text="进入 →" Opacity="0.55" FontSize="12"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                   IsVisible="{Binding Enabled}"/>
+                                    </Grid>
                                 </Grid>
 
                                 <!-- 右上角：卡片背景设置（自绘矢量齿轮，几何对称居中；18=偶数尺寸，光栅化无半像素偏移） -->

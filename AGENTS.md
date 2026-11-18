@@ -42,14 +42,15 @@ SystemToolkit.sln
 | plcscanner | 📡 PLC IP 扫描 | WinForms 项目迁移；ScanCore 原样保留；SendARP 多源地址探测；无引号含空格命令要逐段累积找真实文件（否则误判残留） |
 | nettraffic | 📶 流量监控 | 内核 ETW NETWORK_TCPIP（TraceEvent：kernel.TcpIpSend/Recv 等 8 个事件）按 PID 聚合，需管理员；右键详情=ProcessDetailService（WMI 命令行）+GetExtendedTcpTable 连接表 |
 | serialmcp | 🔌 串口 MCP | 手实现 streamable HTTP（HttpListener+JSON-RPC 2.0，仅回环+Origin 校验+令牌）；**DataReceived 在 com0com 下会触发丢失 → 读取走"事件+主动轮询驱动缓冲"双路径**；SerialMcpRuntime 单例跨视图存活；服务定义注册到 Shell 的 McpServiceRegistry，接入授权/端口记忆在 McpAccessStore |
+| filetransfer | 📤 文件传输 | FTP=FluentFTP（v48 无 (host,port,user,pass) 构造，用属性赋值）；SFTP/SCP=SSH.NET（密码或 PrivateKeyFile 二选一，SFTP 上传前逐级建远程目录）；MCP 服务继承 **Shell.Mcp.McpHttpServer 基类**（新 MCP 服务照抄 TransferMcpRuntime.Server，别再手写 HTTP 层）；站点持久化 transfer-sites.json；AI 调用日志**密码参数脱敏** |
 | logs | 📋 操作日志 | 内置工具（LogsToolModule 在宿主内），直接包 MainViewModel.Logs |
 
 ## MCP 基础设施（工具暴露 MCP 能力的标准通道）
 
-- **注册**：工具 Core 实现模块类的 `static` 构造里 `McpServiceRegistry.Register(<IMcpServiceDefinition 实现>)`，顶栏「🔌 MCP 服务」弹窗（`McpSettingsWindow`）自动纳入管理：启停/端口记忆/接入链接展示，工具内也可自行提供快捷启停（同一运行时单例）。
+- **注册**：工具 Core 实现模块类的 `static` 构造里 `McpServiceRegistry.Register(<IMcpServiceDefinition 能力实现>)`——工具**自动进聚合网关**（`McpGatewayRuntime`，单端口 8642 单 URL 暴露全部启用能力，AI 客户端配置不用改）。顶栏「🔌 MCP 服务」弹窗（`McpSettingsWindow`）：网关启停/端口 + 各能力开关（`SetEnabled` 控制 tools/list 是否含其工具）+ 接入授权；工具卡片内可提供"启动（网关+本能力启用）/停用工具"快捷入口。
 - **授权**：`McpAccessStore`（Shell）全局唯一——按"接入项=一个 AI 客户端"发 32 位令牌，接入 URL = 服务地址 + `?token=`；停用/删除立即失效（每次 HTTP 请求校验）；调用统计与最近使用持久化在 `%LOCALAPPDATA%\SystemToolkit\mcp-access.json`（含各服务记忆端口，首次使用自动建"默认接入"）。
 - **工具内打开设置弹窗**：`Host.ShowMcpSettings()`（IToolHost 扩展），不要自己 new 宿主窗口（工具不引用宿主）。
-- **协议实现要点**（照抄 McpServer）：POST /mcp 单端点；`initialize` 回显客户端请求的受支持协议版本；通知（`notifications/*`）回 **202 且显式设 StatusCode**（HttpListener 默认 200）；GET/DELETE 回 405（无会话/无服务端推送流）；错误分两层——协议错用 JSON-RPC error，工具执行错（串口未开等）用 result.isError=true 让 AI 可恢复。
+- **协议实现要点**：HTTP/JSON-RPC 骨架在 `Toolkit.Shell/Mcp/McpHttpServer.cs` 基类（令牌校验/Origin 校验/initialize 回显/通知 202/GET·DELETE 405 都在基类），目前唯一使用者是 `McpGatewayRuntime` 的网关服务器——**能力自身不要监听端口**，实现 `IMcpServiceDefinition`（`BuildTools/ExecuteTool/SetEnabled/OnToolCalled`）注册进 `McpServiceRegistry` 即自动进网关。错误分两层——协议错用 JSON-RPC error，工具执行错（串口未开等）用 result.isError=true 让 AI 可恢复。**敏感参数（密码）不要进监控日志**（TransferMcpRuntime.SummarizeArgs 有脱敏样例）。XAML 的 StringFormat 格式串**不能以 {0} 开头**（会被当 markup 扩展，写成 `'工具 {0} 个'`）。
 
 ## 宿主通用机制（做 UI 前先读）
 
@@ -81,6 +82,11 @@ src/Toolkit.App/bin/Release/net10.0/Toolkit.App.exe   # 运行验证
 - 每个功能/修复一个 commit，中文提交信息说清"做了什么+实测结果"；
 - 用户没说提交就不要提交，更不要 push；
 - 远程：github.com/ccqin/CCSystemToolkit（master，**公开仓库**）。每次 push 触发 GitHub Actions 自动构建发布（自包含 zip 附到 Releases，tag 规则 v年.月.日.当日序号）。公开仓库注意：提交前不得引入个人路径/账号名/SID 等隐私（历史已有扫描惯例）。
+- **用户隐私数据一律存 `%LOCALAPPDATA%\SystemToolkit\`（AppData，仓库目录之外）**：SQLite 库（toolkit.db）、MCP 令牌（mcp-access.json）、站点密码（transfer-sites.json）、卡片背景等——代码里绝不把数据文件写到仓库目录。`.gitignore` 有防御性兜底规则（*.db / mcp-access* / transfer-sites* 等），**提交前跑一遍确认**：
+  ```bash
+  git status --short   # 不应出现任何 .db/.sqlite/本地 json
+  grep -rniE "ccqin|C:\Users\|S-1-5-21-" --include="*.cs" --include="*.axaml" src/ tools/ | grep -v "obj\|bin"   # 源码无个人路径（obj/ 里 NuGet 生成的除外，已被忽略）
+  ```
 
 ## 已知坑（历史教训，别再踩）
 
@@ -91,6 +97,8 @@ src/Toolkit.App/bin/Release/net10.0/Toolkit.App.exe   # 运行验证
 5. Windows 加固系统可能锁死 TaskCache 注册表/Tasks 目录 → 计划任务走 COM（TaskScheduler NuGet）；
 6. ETW 内核会话必须管理员；非管理员要给出明确引导（以管理员重启按钮）。
 7. **`SerialPort.DataReceived` 事件不可靠**（com0com 虚拟串口实测触发丢失：应答字节到达驱动缓冲后事件不上报）→ 串口等待/读取一律"事件 + 主动轮询驱动缓冲"双路径；读驱动缓冲只请求 `min(BytesToRead, buf)` 可用字节数（**不要请求大缓冲**，Read 会等凑满 count 直到超时）。
-8. PowerShell `SendKeys` 发中文进 UIA 定位的输入框不可靠（焦点不在目标框时内容丢失）→ 自动化填值用 UIA ValuePattern/`set`，不要 SendKeys。
-9. PowerShell 5.1 读 **UTF-8 无 BOM** 的 .ps1 中文会乱码 → 临时脚本输出用英文，或存 UTF-8 **带 BOM**。
-10. `dotnet sln add` 在本仓库嵌套解决方案文件夹（src/Tools/...）下会报"解决方案文件夹 src 已包含 Toolkit.Shell.csproj"而**静默失败** → 新项目手动编辑 sln（Project 条目 + ProjectConfigurationPlatforms 12 行 + NestedProjects 3 行，按现有格式抄 GUID）。
+8. **串口打开必须 `DtrEnable=true, RtsEnable=true`**：.NET SerialPort 默认两者全关，而 Xshell/串口助手默认拉有效——嵌入式调试串口（SylixOS 板子实测）使能/复位脚接在 DTR/RTS 上时，信号无效设备**完全不收发**（Xshell 通、自家工具零字节往返的字面案例）。
+9. PowerShell `SendKeys` 发中文进 UIA 定位的输入框不可靠（焦点不在目标框时内容丢失）→ 自动化填值用 UIA ValuePattern/`set`，不要 SendKeys。
+10. PowerShell 5.1 读 **UTF-8 无 BOM** 的 .ps1 中文会乱码 → 临时脚本输出用英文，或存 UTF-8 **带 BOM**。
+11. `dotnet sln add` 在本仓库嵌套解决方案文件夹（src/Tools/...）下会报"解决方案文件夹 src 已包含 Toolkit.Shell.csproj"而**静默失败** → 新项目手动编辑 sln（Project 条目 + ProjectConfigurationPlatforms 12 行 + NestedProjects 3 行，按现有格式抄 GUID）。
+12. **System.Text.Json 写读必须用同一套 JsonSerializerOptions**：站点存储写入带 `JsonStringEnumConverter`（枚举成字符串）、读取忘了传选项 → 反序列化抛异常被 catch 吞掉 → 启动后列表为空 → 用户再保存一次就把旧文件**覆盖成只剩新数据**（"配置丢失"的完整链条，transfer-sites.json 实测）。读文件失败一律先把原文件备份成 `.bad.bak` 再从空开始，写盘失败必须抛出让 UI 看见（不许静默吞）。

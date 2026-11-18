@@ -11,6 +11,10 @@
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
+  <PropertyGroup Label="Avalonia">
+    <AvaloniaXamlIlDebuggerLaunch>False</AvaloniaXamlIlDebuggerLaunch>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.4" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
@@ -35,6 +39,7 @@
     <ProjectReference Include="..\Tools\PlcScanner\PlcScanner.Ui\PlcScanner.Ui.csproj" />
     <ProjectReference Include="..\Tools\NetTraffic\NetTraffic.Ui\NetTraffic.Ui.csproj" />
     <ProjectReference Include="..\Tools\SerialMcpTool\SerialMcpTool.Ui\SerialMcpTool.Ui.csproj" />
+    <ProjectReference Include="..\Tools\FileTransferTool\FileTransferTool.Ui\FileTransferTool.Ui.csproj" />
   </ItemGroup>
 
 </Project>

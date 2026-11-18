@@ -11,3 +11,15 @@ obj/
 # 发布产物
 publish/
 *.nupkg
+
+# 用户数据 / 本地凭据（正常都在 %LOCALAPPDATA%\SystemToolkit\，此为防御性兜底：
+# 任何人把 db/json 数据复制进仓库目录或本地跑测试产出，都不会被误提交）
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.bad.bak
+mcp-access*.json
+transfer-sites*.json
+card-appearance*.json
+cardbg/

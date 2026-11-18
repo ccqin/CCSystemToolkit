@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using FileTransferTool.Ui;
 using MenuClean.Ui;
 using NetRouteList.Ui;
 using NetTraffic.Ui;
@@ -38,6 +39,7 @@ public partial class App : Application
                 new PlcScannerToolModule { Host = main },
                 new NetTrafficToolModule { Host = main },
                 new SerialMcpToolModule { Host = main },
+                new FileTransferToolModule { Host = main },
                 new LogsToolModule(main) { Host = main },
                 // 未来工具在此追加……
             ], new HomeView { DataContext = main });

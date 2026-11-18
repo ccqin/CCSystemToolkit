@@ -26,6 +26,11 @@ public sealed class EtwTrafficMonitor : IDisposable
 
     private long _lastSnapshotTick;
 
+    /// <summary>历史落库：上次落库时的各进程累计值（差量即本周期增量）。</summary>
+    private readonly Dictionary<int, (long Down, long Up)> _lastPersist = new();
+
+    private Timer? _persistTimer;
+
     public bool IsRunning => _session is not null;
 
     /// <summary>启动监控；非管理员或会话已存在时抛异常/返回 false。</summary>
@@ -57,6 +62,13 @@ public sealed class EtwTrafficMonitor : IDisposable
         }
 
         _lastSnapshotTick = Environment.TickCount64;
+        lock (_lastPersist) _lastPersist.Clear();
+        // 历史落库：周期快照写 SQLite（失败不影响监控——静默降级），启动时顺带清理过期数据
+        Task.Run(TrafficHistoryStore.Prune);
+        _persistTimer?.Dispose();
+        _persistTimer = new Timer(_ => PersistSnapshot(), null,
+            TimeSpan.FromSeconds(TrafficHistoryStore.SnapshotSeconds),
+            TimeSpan.FromSeconds(TrafficHistoryStore.SnapshotSeconds));
         var source = _session.Source;
         _thread = new Thread(() =>
         {
@@ -162,11 +174,41 @@ public sealed class EtwTrafficMonitor : IDisposable
     /// <summary>清零会话累计（速率统计继续）。</summary>
     public void ResetTotals() => _totals.Clear();
 
+    /// <summary>
+    /// 历史落库快照：各进程自上次落库以来的增量写入 SQLite（线程池定时器回调，异常全吞——监控优先）。
+    /// </summary>
+    private void PersistSnapshot()
+    {
+        try
+        {
+            var unixMs = new DateTimeOffset(DateTime.Now).ToUnixTimeMilliseconds();
+            List<(int, string, long, long)> deltas = [];
+            lock (_lastPersist)
+            {
+                foreach (var (pid, (down, up)) in _totals)
+                {
+                    _lastPersist.TryGetValue(pid, out var prev);
+                    var dDown = down - prev.Down;
+                    var dUp = up - prev.Up;
+                    if (dDown > 0 || dUp > 0)
+                        deltas.Add((pid, ResolveName(pid), dUp, dDown));
+                    _lastPersist[pid] = (down, up);
+                }
+            }
+            TrafficHistoryStore.WriteSnapshots(unixMs, deltas);
+        }
+        catch
+        { /* 落库失败不影响监控 */ }
+    }
+
     public void Stop()
     {
         try
         {
             _cts.Cancel();
+            _persistTimer?.Dispose();
+            _persistTimer = null;
+            PersistSnapshot();   // 停止前补最后一笔
             _session?.Dispose();
         }
         catch { }

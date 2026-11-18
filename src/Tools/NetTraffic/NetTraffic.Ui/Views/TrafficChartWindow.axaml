@@ -1,0 +1,20 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="using:NetTraffic.Ui.Controls"
+        x:Class="NetTraffic.Ui.Views.TrafficChartWindow"
+        Title="流量曲线"
+        Width="940" Height="520" MinWidth="640" MinHeight="360" CanResize="True"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+
+    <DockPanel Margin="14,10,14,10">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+        <Border DockPanel.Dock="Bottom" Classes="card" Padding="10,6" Margin="0,8,0,0">
+            <TextBlock Text="{Binding StatsText}" Opacity="0.75" FontSize="12.5" TextWrapping="Wrap"
+                       AutomationProperties.AutomationId="tb-chart-stats" AutomationProperties.Name="曲线统计"/>
+        </Border>
+        <Border Classes="card" Padding="6">
+            <ctl:TrafficChartControl Points="{Binding Points}"
+                                     AutomationProperties.AutomationId="chart-traffic" AutomationProperties.Name="流量折线图"/>
+        </Border>
+    </DockPanel>
+</Window>

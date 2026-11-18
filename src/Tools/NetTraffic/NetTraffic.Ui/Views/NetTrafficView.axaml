@@ -41,35 +41,144 @@
             </Grid>
         </Border>
 
-        <!-- 进程流量表 -->
-        <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
-                  CanUserSortColumns="True" GridLinesVisibility="Horizontal"
-                  SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
-                  AutomationProperties.AutomationId="grid-traffic" AutomationProperties.Name="进程流量表">
-            <DataGrid.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="🔍 查看详细信息" Command="{Binding ShowDetailCommand}"
-                              AutomationProperties.AutomationId="menu-detail"/>
-                    <MenuItem Header="📂 打开文件位置" Command="{Binding OpenFileLocationCommand}"
-                              AutomationProperties.AutomationId="menu-openlocation"/>
-                    <MenuItem Header="🌐 网上搜索此进程" Command="{Binding WebSearchCommand}"
-                              AutomationProperties.AutomationId="menu-websearch"/>
-                    <MenuItem Header="⧉ 复制进程名" Command="{Binding CopyNameCommand}"
-                              AutomationProperties.AutomationId="menu-copyname"/>
-                    <Separator/>
-                    <MenuItem Header="✕ 结束进程" Command="{Binding KillProcessCommand}"
-                              AutomationProperties.AutomationId="menu-kill"/>
-                </ContextMenu>
-            </DataGrid.ContextMenu>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="进程" Binding="{Binding Name}" Width="1.6*"/>
-                <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70"/>
-                <DataGridTextColumn Header="⬇ 下载速率" Binding="{Binding DownText}" Width="110"/>
-                <DataGridTextColumn Header="⬆ 上传速率" Binding="{Binding UpText}" Width="110"/>
-                <DataGridTextColumn Header="⬇ 会话累计" Binding="{Binding DownTotalText}" Width="110"/>
-                <DataGridTextColumn Header="⬆ 会话累计" Binding="{Binding UpTotalText}" Width="110"/>
-                <DataGridTextColumn Header="TCP 连接" Binding="{Binding Connections}" Width="80"/>
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- 实时表 / 历史分析 -->
+        <TabControl AutomationProperties.AutomationId="tabs-traffic" AutomationProperties.Name="流量页签">
+            <TabItem Header="⚡ 实时" AutomationProperties.AutomationId="tab-realtime">
+                <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                          SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
+                          AutomationProperties.AutomationId="grid-traffic" AutomationProperties.Name="进程流量表">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="🔍 查看详细信息" Command="{Binding ShowDetailCommand}"
+                                      AutomationProperties.AutomationId="menu-detail"/>
+                            <MenuItem Header="📂 打开文件位置" Command="{Binding OpenFileLocationCommand}"
+                                      AutomationProperties.AutomationId="menu-openlocation"/>
+                            <MenuItem Header="🌐 网上搜索此进程" Command="{Binding WebSearchCommand}"
+                                      AutomationProperties.AutomationId="menu-websearch"/>
+                            <MenuItem Header="⧉ 复制进程名" Command="{Binding CopyNameCommand}"
+                                      AutomationProperties.AutomationId="menu-copyname"/>
+                            <Separator/>
+                            <MenuItem Header="✕ 结束进程" Command="{Binding KillProcessCommand}"
+                                      AutomationProperties.AutomationId="menu-kill"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="进程" Binding="{Binding Name}" Width="1.6*"/>
+                        <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70"/>
+                        <DataGridTextColumn Header="⬇ 下载速率" Binding="{Binding DownText}" Width="110"/>
+                        <DataGridTextColumn Header="⬆ 上传速率" Binding="{Binding UpText}" Width="110"/>
+                        <DataGridTextColumn Header="⬇ 会话累计" Binding="{Binding DownTotalText}" Width="110"/>
+                        <DataGridTextColumn Header="⬆ 会话累计" Binding="{Binding UpTotalText}" Width="110"/>
+                        <DataGridTextColumn Header="TCP 连接" Binding="{Binding Connections}" Width="80"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+
+            <TabItem Header="📊 历史分析" AutomationProperties.AutomationId="tab-history">
+                <DockPanel Margin="0,10,0,0">
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,150,Auto,Auto,Auto,*,Auto" ColumnSpacing="8"
+                          Margin="4,0,4,8">
+                        <TextBlock Grid.Column="0" Text="时间范围" VerticalAlignment="Center" Opacity="0.65"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{x:Static vm:NetTrafficViewModel.HistoryRanges}"
+                                  SelectedIndex="{Binding HistoryRangeIndex}"
+                                  AutomationProperties.AutomationId="combo-history-range" AutomationProperties.Name="历史时间范围"/>
+                        <Button Grid.Column="2" Content="🔍 查询" Classes="accent" Padding="14,4"
+                                Command="{Binding LoadHistoryCommand}"
+                                AutomationProperties.AutomationId="btn-loadhistory" AutomationProperties.Name="查询历史"/>
+                        <Button Grid.Column="3" Content="⧉ 复制结果" Padding="12,4" Margin="8,0,0,0"
+                                Command="{Binding CopyHistoryCommand}"
+                                AutomationProperties.AutomationId="btn-copyhistory" AutomationProperties.Name="复制历史结果"/>
+                        <TextBlock Grid.Column="6" Text="{Binding HistoryStats}" Opacity="0.65" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"
+                                   AutomationProperties.AutomationId="tb-historystats" AutomationProperties.Name="历史统计"/>
+                    </Grid>
+                    <TextBlock DockPanel.Dock="Top" Opacity="0.5" Margin="6,6,6,8" TextWrapping="Wrap"
+                               Text="历史数据来自 SQLite（toolkit.db，每 10 秒采样、保留 14 天）——只在「监控运行期间」记录：想分析哪段时间，让监控在那段时间保持开启。"/>
+                    <DataGrid x:Name="HistoryGrid" ItemsSource="{Binding HistoryRows}" AutoGenerateColumns="False" IsReadOnly="True"
+                              CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                              SelectedItem="{Binding SelectedHistoryRow, Mode=TwoWay}"
+                              DoubleTapped="HistoryGrid_DoubleTapped"
+                              AutomationProperties.AutomationId="grid-history" AutomationProperties.Name="流量历史汇总表">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="📈 查看流量曲线" Command="{Binding ShowTrafficChartCommand}"
+                                          ToolTip.Tip="该进程在所选时间范围内的逐采样点流量折线（悬停读值）。"
+                                          AutomationProperties.AutomationId="menu-chart" AutomationProperties.Name="查看流量曲线"/>
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="进程" Binding="{Binding Name}" Width="1.8*"/>
+                            <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70"/>
+                            <DataGridTextColumn Header="⬇ 下行流量" Binding="{Binding DownText}" Width="1*"/>
+                            <DataGridTextColumn Header="⬆ 上行流量" Binding="{Binding UpText}" Width="1*"/>
+                            <DataGridTextColumn Header="合计" Binding="{Binding TotalText}" Width="1*"/>
+                            <DataGridTextColumn Header="活跃周期" Binding="{Binding PeriodsText}" Width="100"/>
+                            <DataGridTextColumn Header="首次出现" Binding="{Binding FirstSeen, StringFormat='HH:mm:ss'}" Width="90"/>
+                            <DataGridTextColumn Header="最后出现" Binding="{Binding LastSeen, StringFormat='HH:mm:ss'}" Width="90"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+            <!-- 代理分析：谁在走 FlClashCore（Clash 内核连接表，按进程归因） -->
+            <TabItem Header="🛡 代理分析" AutomationProperties.AutomationId="tab-proxy">
+                <DockPanel Margin="0,10,0,0">
+                    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="4,0,4,8">
+                        <Grid ColumnDefinitions="Auto,240,Auto,150,Auto,Auto" ColumnSpacing="8">
+                            <TextBlock Grid.Column="0" Text="控制器" VerticalAlignment="Center" Opacity="0.65"
+                                       ToolTip.Tip="FlClash/Clash 内核「外部控制」地址（FlClash 默认 http://127.0.0.1:9090，设置里可查）。"/>
+                            <TextBox Grid.Column="1" Classes="mono" Text="{Binding ProxyBaseUri}" Watermark="http://127.0.0.1:9090"
+                                     AutomationProperties.AutomationId="input-proxy-uri" AutomationProperties.Name="控制器地址"/>
+                            <TextBlock Grid.Column="2" Text="密钥" VerticalAlignment="Center" Opacity="0.65"/>
+                            <TextBox Grid.Column="3" Text="{Binding ProxySecret}" PasswordChar="*" Watermark="（无则留空）"
+                                     AutomationProperties.AutomationId="input-proxy-secret" AutomationProperties.Name="控制器密钥"/>
+                            <Button Grid.Column="4" Content="🔄 查询" Classes="accent" Padding="14,5"
+                                    Command="{Binding LoadProxyCommand}"
+                                    AutomationProperties.AutomationId="btn-proxy-load" AutomationProperties.Name="查询代理连接"/>
+                            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock Text="自动 5s" VerticalAlignment="Center" Opacity="0.65"
+                                           ToolTip.Tip="每 5 秒自动刷新连接表。"/>
+                                <ToggleSwitch IsChecked="{Binding ProxyAuto}"
+                                              AutomationProperties.AutomationId="chk-proxy-auto" AutomationProperties.Name="自动刷新"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{Binding ProxyStats}" Opacity="0.7" TextTrimming="CharacterEllipsis"
+                                   AutomationProperties.AutomationId="tb-proxy-stats" AutomationProperties.Name="代理统计"/>
+                    </StackPanel>
+
+                    <Grid RowDefinitions="Auto,8,*" DockPanel.Dock="Bottom">
+                        <TextBlock Grid.Row="0" Text="按进程（谁在走代理）" FontWeight="SemiBold" Margin="4,0,0,4"/>
+                        <DataGrid Grid.Row="2" ItemsSource="{Binding ProxyByProcess}" AutoGenerateColumns="False" IsReadOnly="True"
+                                  CanUserSortColumns="True" GridLinesVisibility="Horizontal" MaxHeight="220" MinHeight="110"
+                                  AutomationProperties.AutomationId="grid-proxy-proc" AutomationProperties.Name="代理按进程表">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="进程" Binding="{Binding Process}" Width="2*"/>
+                                <DataGridTextColumn Header="连接数" Binding="{Binding Connections}" Width="80"/>
+                                <DataGridTextColumn Header="⬇ 下行" Binding="{Binding Download}" Width="1.2*"/>
+                                <DataGridTextColumn Header="⬆ 上行" Binding="{Binding Upload}" Width="1.2*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+
+                    <Grid RowDefinitions="Auto,4,*">
+                        <TextBlock Grid.Row="0" Text="活跃连接明细" FontWeight="SemiBold" Margin="4,8,0,4"/>
+                        <DataGrid Grid.Row="2" ItemsSource="{Binding ProxyConnections}" AutoGenerateColumns="False" IsReadOnly="True"
+                                  CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                                  AutomationProperties.AutomationId="grid-proxy-conns" AutomationProperties.Name="代理连接明细表">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="进程" Binding="{Binding Process}" Width="1.4*"/>
+                                <DataGridTextColumn Header="目标" Binding="{Binding Destination}" Width="2*"/>
+                                <DataGridTextColumn Header="网络" Binding="{Binding Network}" Width="60"/>
+                                <DataGridTextColumn Header="规则" Binding="{Binding Rule}" Width="1*"/>
+                                <DataGridTextColumn Header="出口节点" Binding="{Binding Chain}" Width="1.6*"/>
+                                <DataGridTextColumn Header="⬇" Binding="{Binding Download}" Width="90"/>
+                                <DataGridTextColumn Header="⬆" Binding="{Binding Upload}" Width="90"/>
+                                <DataGridTextColumn Header="开始时间" Binding="{Binding Start, StringFormat='HH:mm:ss'}" Width="86"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </UserControl>

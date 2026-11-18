@@ -14,4 +14,9 @@
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- 流量历史落库（Shell 的 SqliteStore） -->
+    <ProjectReference Include="..\..\..\Toolkit.Shell\Toolkit.Shell.csproj" />
+  </ItemGroup>
+
 </Project>
